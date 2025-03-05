@@ -1,14 +1,31 @@
 "use client";
 
-import { useState } from 'react';
-import { supabase } from '../lib/supabaseClient'; 
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabaseClient';
 
-export default function Home() {
+export default function HomePage() {
+  const router = useRouter();
   const [users, setUsers] = useState<any[]>([]);
   const [entries, setEntries] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!session) {
+        router.replace('/auth'); // 認証画面にリダイレクト
+      } else {
+        fetchUsers(); // ユーザーがログインしている場合、ユーザー情報を取得
+        fetchEntries(); // エントリ情報を取得
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [router]);
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
