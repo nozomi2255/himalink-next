@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import dayGridPlugin from "@fullcalendar/daygrid";
 
 interface Entry {
   id: string;
@@ -67,20 +68,22 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
       <h1 className="text-2xl font-bold">Calendar</h1>
-      <button onClick={handleLogout} className="mt-4 bg-red-500 text-white p-2 rounded hover:bg-red-600">
-        Logout
-      </button>
+      <div className="absolute top-4 right-4">
+        <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded hover:bg-red-600">
+          Logout
+        </button>
+      </div>
       {loading ? (
         <p>Loading entries...</p>
       ) : (
         <div className="w-full max-w-4xl mt-4">
           <FullCalendar
-            plugins={[timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
+            plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
+            initialView="dayGridMonth"
             headerToolbar={{
               left: "prev,next today",
               center: "title",
-              right: "timeGridWeek,timeGridDay",
+              right: "dayGridMonth,timeGridWeek,timeGridDay",
             }}
             events={events}
             editable={true}
