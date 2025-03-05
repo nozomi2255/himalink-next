@@ -26,6 +26,7 @@ export default function CalendarPage() {
   const [showForm, setShowForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -74,9 +75,59 @@ export default function CalendarPage() {
 
   // 日付セルがクリックされた際の処理
   const handleDateClick = (arg: any) => {
-    // arg.dateStr はクリックされた日付 (ISO形式)
     setSelectedDate(arg.dateStr);
-    setShowForm(true);
+    setNewTitle(""); // 新しいタイトルをリセット
+    setShowForm(true); // フォームを表示
+    setSelectedEventId(""); // 選択されたイベントIDをリセット
+  };
+
+  // 予定の編集処理
+  const handleEventClick = (arg: any) => {
+    const event = entries.find(entry => entry.id === arg.event.id);
+    if (event) {
+      setNewTitle(event.title); // 既存のタイトルを設定
+      setSelectedDate(event.start_time.split("T")[0]); // 日付を設定
+      setShowForm(true); // フォームを表示
+      setSelectedEventId(event.id); // 選択されたイベントIDを設定
+    }
+  };
+
+  // 予定の更新処理
+  const handleUpdateEvent = async () => {
+    if (!currentUserId || !selectedEventId) return; // selectedEventIdが必要
+
+    const { data, error } = await supabase
+      .from("Entries")
+      .update({ title: newTitle }) // タイトルを更新
+      .eq("id", selectedEventId); // IDでフィルタリング
+
+    if (error) {
+      console.error("Error updating event:", error);
+    } else {
+      fetchEntries(currentUserId); // 一覧を更新
+      setShowForm(false); // フォームを非表示
+      setNewTitle(""); // タイトルをリセット
+    }
+  };
+
+  // 予定の削除処理
+  const handleDeleteEvent = async () => {
+    if (!selectedEventId) return; // selectedEventIdが必要
+
+    const { error } = await supabase
+      .from("Entries")
+      .delete()
+      .eq("id", selectedEventId); // IDでフィルタリング
+
+    if (error) {
+      console.error("Error deleting event:", error);
+    } else {
+      if (currentUserId) { // currentUserIdがnullでないことを確認
+        fetchEntries(currentUserId); // 一覧を更新
+      }
+      setShowForm(false); // フォームを非表示
+      setNewTitle(""); // タイトルをリセット
+    }
   };
 
   // 予定追加処理
@@ -136,6 +187,7 @@ export default function CalendarPage() {
             editable={true}
             selectable={!showForm}
             dateClick={handleDateClick}
+            eventClick={handleEventClick}
           />
         </div>
       )}
@@ -144,7 +196,7 @@ export default function CalendarPage() {
         <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-white bg-opacity-50 z-50">
           <div className="bg-white p-6 rounded shadow-lg">
             <h2 className="text-xl mb-4">
-              Add Event on {selectedDate}
+              {selectedEventId ? `Edit Event on ${selectedDate}` : `Add Event on ${selectedDate}`}
             </h2>
             <input
               type="text"
@@ -160,12 +212,29 @@ export default function CalendarPage() {
               >
                 Cancel
               </button>
-              <button
-                onClick={handleAddEvent}
-                className="bg-blue-500 text-white px-4 py-2 rounded"
-              >
-                Save
-              </button>
+              {selectedEventId ? (
+                <>
+                  <button
+                    onClick={handleUpdateEvent}
+                    className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={handleDeleteEvent}
+                    className="bg-red-500 text-white px-4 py-2 rounded"
+                  >
+                    Delete
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={handleAddEvent}
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                >
+                  Save
+                </button>
+              )}
             </div>
           </div>
         </div>
