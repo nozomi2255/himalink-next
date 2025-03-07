@@ -79,6 +79,7 @@ export default function OtherCalendarPage() {
             }}
             events={events}
             editable={false} // 他人の予定は編集不可とする場合
+            height="auto"
           />
         </div>
       )}
