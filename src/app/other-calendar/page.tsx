@@ -31,18 +31,19 @@ export default function OtherCalendarPage() {
         router.replace("/auth");
       } else {
         setCurrentUserId(session.user.id);
-        fetchOtherEntries(session.user.id);
+        fetchOtherEntries();
       }
     };
     checkSessionAndFetch();
   }, [router]);
 
-  const fetchOtherEntries = async (userId: string) => {
+  const fetchOtherEntries = async () => {
     setLoading(true);
+    const mockUserId = "ed967a9d-22a8-4e66-8f68-c8cd028ffffb";
     const { data, error } = await supabase
       .from("Entries")
       .select("id, user_id, title, content, start_time, end_time, is_all_day")
-      .neq("user_id", userId)
+      .eq("user_id", mockUserId)
       .order("start_time", { ascending: true });
 
     if (error) {
@@ -81,6 +82,7 @@ export default function OtherCalendarPage() {
           />
         </div>
       )}
+      {currentUserId && <p>Current User ID: {currentUserId}</p>}
     </div>
   );
 }
