@@ -16,6 +16,7 @@ interface Entry {
   content: string;
   start_time: string; // ISO 8601 format
   end_time: string; // ISO 8601 format
+  is_all_day: boolean;
 }
 
 export default function CalendarPage() {
@@ -44,7 +45,7 @@ export default function CalendarPage() {
     setLoading(true);
     const { data, error } = await supabase
       .from('Entries')
-      .select('id, user_id, title, content, start_time, end_time')
+      .select('id, user_id, title, content, start_time, end_time, is_all_day')
       .eq('user_id', userId) // ユーザーIDでフィルタリング
       .order('start_time', { ascending: true });
 
@@ -66,15 +67,28 @@ export default function CalendarPage() {
   };
 
   // Supabaseから取得したエントリーデータをFullCalendar用のイベントに変換
-  const events = entries.map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-    start: entry.start_time,
-    end: entry.end_time,
-  }));
+  const events = entries.map((entry) => {
+    if (entry.is_all_day) {
+      return {
+        id: entry.id,
+        title: entry.title,
+        start: entry.start_time ? entry.start_time.split("T")[0] : "", // "YYYY-MM-DD"
+        end: entry.end_time ? entry.end_time.split("T")[0] : "", // 終日イベントのため日付のみ
+        allDay: true,
+      };
+    } else {
+      return {
+        id: entry.id,
+        title: entry.title,
+        start: entry.start_time,
+        end: entry.end_time,
+        allDay: false,
+      };
+    }
+  });
 
   // 日付セルがクリックされた際の処理
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: { dateStr: string }) => {
     setSelectedDate(arg.dateStr);
     setNewTitle(""); // 新しいタイトルをリセット
     setShowForm(true); // フォームを表示
@@ -82,7 +96,7 @@ export default function CalendarPage() {
   };
 
   // 予定の編集処理
-  const handleEventClick = (arg: any) => {
+  const handleEventClick = (arg: { event: { id: string } }) => {
     const event = entries.find(entry => entry.id === arg.event.id);
     if (event) {
       setNewTitle(event.title); // 既存のタイトルを設定
@@ -96,7 +110,7 @@ export default function CalendarPage() {
   const handleUpdateEvent = async () => {
     if (!currentUserId || !selectedEventId) return; // selectedEventIdが必要
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("Entries")
       .update({ title: newTitle }) // タイトルを更新
       .eq("id", selectedEventId); // IDでフィルタリング
@@ -134,11 +148,7 @@ export default function CalendarPage() {
   const handleAddEvent = async () => {
     if (!currentUserId) return;
 
-    // クリックした日付を基にstart_timeとend_timeを設定
-    const startTime = `${selectedDate}T00:00:00`; // クリックした日付の00:00
-    const endTime = `${selectedDate}T00:00:00`; // 次の日の00:00
-
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("Entries")
       .insert([
         {
@@ -146,8 +156,8 @@ export default function CalendarPage() {
           entry_type: "event",
           title: newTitle,
           content: "",
-          start_time: startTime, // ここでstart_timeを設定
-          end_time: endTime, // ここでend_timeを設定
+          start_time: `${selectedDate}T00:00:00`, // ここでstart_timeを設定
+          end_time: `${selectedDate}T23:59:59`, // ここでend_timeを設定
           is_all_day: true, // all_dayをtrueに設定
           location: null,
         },
@@ -156,10 +166,9 @@ export default function CalendarPage() {
     if (error) {
       console.error("Error adding event:", error);
     } else {
-      // 追加後、一覧を更新
-      fetchEntries(currentUserId);
-      setShowForm(false);
-      setNewTitle("");
+      fetchEntries(currentUserId); // 一覧を更新
+      setShowForm(false); // フォームを非表示
+      setNewTitle(""); // タイトルをリセット
     }
   };
 
