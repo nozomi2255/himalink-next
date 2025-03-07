@@ -4,19 +4,25 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 
+interface User {
+  id: string;
+  email: string;
+  // 他の必要なプロパティを追加
+}
+
 export default function AuthPage() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        setUser(session.user);
+        setUser(session.user as User);
         router.replace('/calendar'); // ログイン成功時にカレンダー画面に遷移
       }
     });
@@ -42,7 +48,7 @@ export default function AuthPage() {
         setError('ログインに失敗しました。しばらくしてから再試行してください。');
       }
     } else {
-      setUser(data.user);
+      setUser(data.user as User);
     }
   };
 
@@ -72,7 +78,7 @@ export default function AuthPage() {
         setError("サインアップに失敗しました。しばらくしてから再試行してください。");
       }
     } else {
-      setUser(data.user);
+      setUser(data.user as User);
     }
   };
 
