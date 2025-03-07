@@ -41,14 +41,6 @@ export default function OtherCalendarPage() {
     checkSessionAndFetch();
   }, [router, userId]);
 
-  useEffect(() => {
-    if (userId && Array.isArray(userId)) {
-      fetchOtherEntries(userId[0]); // Use the first element if userId is an array
-    } else if (userId) {
-      fetchOtherEntries(userId); // Use userId directly if it's a string
-    }
-  }, [userId]);
-
   const fetchOtherEntries = async (userId: string) => {
     setLoading(true);
 

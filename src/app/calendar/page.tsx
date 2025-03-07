@@ -218,13 +218,21 @@ export default function CalendarPage() {
             className="border p-2"
           />
           <button onClick={handleSearch} className="ml-2 btn">Search</button>
+          {userName && <p className="mt-2">Selected user: {userName}</p>}
           {searchResults.length > 0 && (
             <ul className="mt-2">
               {searchResults.map((user) => (
-                <li key={user.id} onClick={() => handleUserClick(user.id)} className="cursor-pointer">
-                  {user.username} ({user.email})
-                </li>
-              ))}
+              <li
+                key={user.id}
+                onClick={() => {
+                  setUserName(user.username);
+                  handleUserClick(user.id);
+                }}
+                className="cursor-pointer"
+              >
+                {user.username} ({user.email})
+              </li>
+            ))}
             </ul>
           )}
         </div>
