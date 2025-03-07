@@ -25,6 +25,7 @@ export default function OtherCalendarPage() {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
 
   useEffect(() => {
     const checkSessionAndFetch = async () => {
@@ -36,6 +37,7 @@ export default function OtherCalendarPage() {
         if (userId) {
           fetchOtherEntries(Array.isArray(userId) ? userId[0] : userId);
         }
+        checkFollowStatus(session.user.id, userId as string);
       }
     };
     checkSessionAndFetch();
@@ -49,12 +51,12 @@ export default function OtherCalendarPage() {
       .from('Users')
       .select('username')
       .eq('id', userId)
-      .single(); // Get a single user
+      .maybeSingle(); // Get a single user
 
     if (userError) {
       console.error('Error fetching user data:', userError);
     } else {
-      setUserName(userData.username); // Set the username
+      setUserName(userData?.username || null); // Set the username
     }
 
     // Fetch entries for the user
@@ -81,6 +83,51 @@ export default function OtherCalendarPage() {
     allDay: entry.is_all_day,
   }));
 
+  const checkFollowStatus = async (currentUserId: string, targetUserId: string) => {
+    const { data, error } = await supabase
+      .from("Follows")
+      .select("id")
+      .eq("follower_id", currentUserId)
+      .eq("following_id", targetUserId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Error checking follow status:", error);
+    } else {
+      setIsFollowing(!!data); // フォロー中かどうかを設定
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!currentUserId || !userId) return;
+
+    const { error } = await supabase
+      .from("Follows")
+      .insert([{ follower_id: currentUserId, following_id: userId }]); 
+
+    if (error) {
+      console.error("Error following user:", error);
+    } else {
+      setIsFollowing(true); // フォロー状態を更新
+    }
+  };
+
+  const handleUnfollow = async () => {
+    if (!currentUserId || !userId) return;
+
+    const { error } = await supabase
+      .from("Follows")
+      .delete()
+      .eq("follower_id", currentUserId)
+      .eq("following_id", userId);
+
+    if (error) {
+      console.error("Error unfollowing user:", error);
+    } else {
+      setIsFollowing(false); // フォロー状態を更新
+    }
+  };
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold">{userName ? `${userName}'s Calendar` : "Loading..."}</h1>
@@ -103,6 +150,23 @@ export default function OtherCalendarPage() {
         </div>
       )}
       {currentUserId && <p>Current User ID: {currentUserId}</p>}
+      <div className="mt-4">
+        {isFollowing ? (
+          <button
+            onClick={handleUnfollow}
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            Unfollow
+          </button>
+        ) : (
+          <button
+            onClick={handleFollow}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Follow
+          </button>
+        )}
+      </div>
     </div>
   );
 }
