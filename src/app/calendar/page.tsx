@@ -26,7 +26,7 @@ export default function CalendarPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [searchEmail, setSearchEmail] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [showForm, setShowForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
