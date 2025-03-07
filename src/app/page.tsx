@@ -1,8 +1,9 @@
-"use client";
+'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabaseClient';
+import Head from 'next/head';
 
 interface User {
   id: string;
@@ -93,34 +94,51 @@ export default function HomePage() {
   }
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold">Users</h1>
-      <button onClick={fetchUsers} className="btn">Fetch Users</button>
-      {loadingUsers ? (
-        <p>Loading users...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : (
-        <ul>
-          {users.map((user) => (
-            <li key={user.id}>{user.full_name || user.username || user.email}</li>
-          ))}
-        </ul>
-      )}
+    <>
+      <Head>
+        <title>ひまリンク - 直感的なカレンダー & ソーシャルスケジューリング</title>
+        <meta
+          name="description"
+          content="ひまリンクは、直感的なカレンダー表示と予定管理機能を通じて、ユーザーが簡単に予定を追加・編集し、友人と共有できる革新的なサービスです。"
+        />
+        <link rel="canonical" href="https://yourdomain.com" />
+      </Head>
+      <div className="p-8">
+        <h1 className="text-4xl font-bold">ひまリンクへようこそ</h1>
+        <p className="mt-4 text-lg">
+          ひまリンクは、直感的なカレンダー表示と予定管理機能を提供する革新的なサービスです。
+          ここでは、あなたの予定を簡単に追加・編集し、友人との共有もスムーズに行えます。
+        </p>
+      </div>
+      <div className="p-4">
+        <h1 className="text-2xl font-bold">Users</h1>
+        <button onClick={fetchUsers} className="btn">Fetch Users</button>
+        {loadingUsers ? (
+          <p>Loading users...</p>
+        ) : error ? (
+          <p className="text-red-500">{error}</p>
+        ) : (
+          <ul>
+            {users.map((user) => (
+              <li key={user.id}>{user.full_name || user.username || user.email}</li>
+            ))}
+          </ul>
+        )}
 
-      <h1 className="text-2xl font-bold mt-4">Entries</h1>
-      <button onClick={fetchEntries} className="btn">Fetch Entries</button>
-      {loadingEntries ? (
-        <p>Loading entries...</p>
-      ) : error ? (
-        <p className="text-red-500">{error}</p>
-      ) : (
-        <ul>
-          {entries.map((entry) => (
-            <li key={entry.id}>{entry.title}</li>
-          ))}
-        </ul>
-      )}
-    </div>
+        <h1 className="text-2xl font-bold mt-4">Entries</h1>
+        <button onClick={fetchEntries} className="btn">Fetch Entries</button>
+        {loadingEntries ? (
+          <p>Loading entries...</p>
+        ) : error ? (
+          <p className="text-red-500">{error}</p>
+        ) : (
+          <ul>
+            {entries.map((entry) => (
+              <li key={entry.id}>{entry.title}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
   );
 }
