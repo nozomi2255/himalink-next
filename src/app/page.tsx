@@ -34,19 +34,20 @@ export default function HomePage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingEntries, setLoadingEntries] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const session = supabase.auth.getSession();
-    session.then(({ data }) => {
-      if (!data.session) {
-        router.replace('/auth'); // 未ログインの場合、認証画面にリダイレクト
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.replace('/auth');
       } else {
-        router.replace('/calendar'); // ログイン済みの場合、カレンダー画面にリダイレクト
+        router.replace('/calendar');
       }
-      setLoading(false); // ローディングを終了
-    });
+    };
+
+    checkSession();
   }, [router]);
 
   const fetchUsers = async () => {
@@ -84,7 +85,7 @@ export default function HomePage() {
   };
 
   if (loading) {
-    return <p>Loading...</p>; // ローディング中の表示
+    return <p>Loading...</p>;
   }
 
   return (
