@@ -52,6 +52,7 @@ export default function HomePage() {
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
+    setLoading(true);
     setError(null);
     const { data, error } = await supabase
       .from('Users')
@@ -65,10 +66,12 @@ export default function HomePage() {
       setUsers(data);
     }
     setLoadingUsers(false);
+    setLoading(false);
   };
 
   const fetchEntries = async () => {
     setLoadingEntries(true);
+    setLoading(true);
     setError(null);
     const { data, error } = await supabase
       .from('Entries')
@@ -82,6 +85,7 @@ export default function HomePage() {
       setEntries(data);
     }
     setLoadingEntries(false);
+    setLoading(false);
   };
 
   if (loading) {
