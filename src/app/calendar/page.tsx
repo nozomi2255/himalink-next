@@ -19,6 +19,12 @@ interface Entry {
   is_all_day: boolean;
 }
 
+interface User { // Define the User interface
+  id: string;
+  username: string;
+  email: string;
+}
+
 export default function CalendarPage() {
   const router = useRouter();
   const [entries, setEntries] = useState<Entry[]>([]);
