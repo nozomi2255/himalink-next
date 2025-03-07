@@ -23,6 +23,7 @@ export default function OtherCalendarPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     const checkSessionAndFetch = async () => {
@@ -40,6 +41,19 @@ export default function OtherCalendarPage() {
   const fetchOtherEntries = async () => {
     setLoading(true);
     const mockUserId = "ed967a9d-22a8-4e66-8f68-c8cd028ffffb";
+    
+    const { data: userData, error: userError } = await supabase
+      .from("Users")
+      .select("username")
+      .eq("id", mockUserId)
+      .single();
+
+    if (userError) {
+      console.error("Error fetching user data:", userError);
+    } else {
+      setUserName(userData.username);
+    }
+
     const { data, error } = await supabase
       .from("Entries")
       .select("id, user_id, title, content, start_time, end_time, is_all_day")
@@ -64,7 +78,7 @@ export default function OtherCalendarPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold">Other Users' Calendars</h1>
+      <h1 className="text-2xl font-bold">{userName ? `${userName}'s Calendar` : "Loading..."}</h1>
       {loading ? (
         <p>Loading entries...</p>
       ) : (
