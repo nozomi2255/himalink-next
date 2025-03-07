@@ -24,6 +24,10 @@ export default function CalendarPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [searchEmail, setSearchEmail] = useState<string>("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearch, setShowSearch] = useState<boolean>(false);
   const [showForm, setShowForm] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
@@ -64,6 +68,25 @@ export default function CalendarPage() {
     } else {
       router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
     }
+  };
+
+  // ユーザー検索処理
+  const handleSearch = async () => {
+    const { data, error } = await supabase
+      .from("Users")
+      .select("id, username, email")
+      .ilike("email", `%${searchEmail}%`); // メールアドレスで検索
+
+    if (error) {
+      console.error("Error searching users:", error);
+    } else {
+      setSearchResults(data);
+    }
+  };
+
+  const handleUserClick = (userId: string) => {
+    // ユーザーのカレンダーを表示するためにリダイレクト
+    router.push(`/other-calendar/${userId}`);
   };
 
   // Supabaseから取得したエントリーデータをFullCalendar用のイベントに変換
@@ -180,6 +203,33 @@ export default function CalendarPage() {
           Logout
         </button>
       </div>
+
+      {/* 検索ボタン */}
+      <button onClick={() => setShowSearch(!showSearch)} className="mt-4 btn">
+        {showSearch ? "Close Search" : "Search User"}
+      </button>
+      {showSearch && (
+        <div className="mt-2">
+          <input
+            type="email"
+            placeholder="Enter email address"
+            value={searchEmail}
+            onChange={(e) => setSearchEmail(e.target.value)}
+            className="border p-2"
+          />
+          <button onClick={handleSearch} className="ml-2 btn">Search</button>
+          {searchResults.length > 0 && (
+            <ul className="mt-2">
+              {searchResults.map((user) => (
+                <li key={user.id} onClick={() => handleUserClick(user.id)} className="cursor-pointer">
+                  {user.username} ({user.email})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p>Loading entries...</p>
       ) : (

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
-import { useRouter } from "next/navigation";
+import { supabase } from "../../../lib/supabaseClient";
+import { useParams, useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -19,6 +19,7 @@ interface Entry {
 }
 
 export default function OtherCalendarPage() {
+  const { userId } = useParams();
   const router = useRouter();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,41 +33,53 @@ export default function OtherCalendarPage() {
         router.replace("/auth");
       } else {
         setCurrentUserId(session.user.id);
-        fetchOtherEntries();
+        if (userId) {
+          fetchOtherEntries(Array.isArray(userId) ? userId[0] : userId);
+        }
       }
     };
     checkSessionAndFetch();
-  }, [router]);
+  }, [router, userId]);
 
-  const fetchOtherEntries = async () => {
+  useEffect(() => {
+    if (userId && Array.isArray(userId)) {
+      fetchOtherEntries(userId[0]); // Use the first element if userId is an array
+    } else if (userId) {
+      fetchOtherEntries(userId); // Use userId directly if it's a string
+    }
+  }, [userId]);
+
+  const fetchOtherEntries = async (userId: string) => {
     setLoading(true);
-    const mockUserId = "ed967a9d-22a8-4e66-8f68-c8cd028ffffb";
-    
+
+    // Fetch user information
     const { data: userData, error: userError } = await supabase
-      .from("Users")
-      .select("username")
-      .eq("id", mockUserId)
-      .single();
+      .from('Users')
+      .select('username')
+      .eq('id', userId)
+      .single(); // Get a single user
 
     if (userError) {
-      console.error("Error fetching user data:", userError);
+      console.error('Error fetching user data:', userError);
     } else {
-      setUserName(userData.username);
+      setUserName(userData.username); // Set the username
     }
 
+    // Fetch entries for the user
     const { data, error } = await supabase
-      .from("Entries")
-      .select("id, user_id, title, content, start_time, end_time, is_all_day")
-      .eq("user_id", mockUserId)
-      .order("start_time", { ascending: true });
+      .from('Entries')
+      .select('id, user_id, title, content, start_time, end_time, is_all_day')
+      .eq('user_id', userId)
+      .order('start_time', { ascending: true });
 
     if (error) {
-      console.error("Error fetching other entries:", error);
+      console.error('Error fetching entries:', error);
     } else {
       setEntries(data);
     }
     setLoading(false);
   };
+      
 
   const events = entries.map((entry) => ({
     id: entry.id,
