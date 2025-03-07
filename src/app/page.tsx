@@ -14,10 +14,24 @@ interface User {
   updated_at?: string;
 }
 
+interface Entry {
+  id: string;
+  user_id: string;
+  entry_type: string;
+  title: string;
+  content: string;
+  start_time: string;
+  end_time: string;
+  is_all_day: boolean;
+  location: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [entries, setEntries] = useState<any[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [error, setError] = useState<string | null>(null);

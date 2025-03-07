@@ -44,7 +44,7 @@ export default function CalendarPage() {
   const fetchEntries = async (userId: string) => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('Entries')
+      .from<Entry>('Entries') // Entry型を指定
       .select('id, user_id, title, content, start_time, end_time, is_all_day')
       .eq('user_id', userId) // ユーザーIDでフィルタリング
       .order('start_time', { ascending: true });
