@@ -39,6 +39,7 @@ export default function CalendarPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
   const [followingUsers, setFollowingUsers] = useState<User[]>([]);
+  const [followers, setFollowers] = useState<User[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -90,6 +91,36 @@ export default function CalendarPage() {
       } else {
         setFollowingUsers(usersData); // Set following users
       }
+    }
+  };
+
+  const fetchFollowers = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('Follows')
+      .select('follower_id')
+      .eq('following_id', userId);
+
+    if (error) {
+      console.error('Error fetching followers:', error);
+    } else {
+      // Fetch user details for followers
+      const followerIds = data.map((follow) => follow.follower_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('Users')
+        .select('id, username, email')
+        .in('id', followerIds);
+        
+      if (usersError) {
+        console.error('Error fetching followers details:', usersError);
+      } else {
+        setFollowers(usersData); // Set followers
+      }
+    }
+  };
+
+  const handleFetchFollowers = () => {
+    if (currentUserId) {
+      fetchFollowers(currentUserId); // Fetch followers when button is clicked
     }
   };
 
@@ -229,9 +260,12 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-      <h1 className="text-2xl font-bold">Calendar</h1>
+      <h1 className="text-2xl font-bold">My Calendar</h1>
       <div className="absolute top-4 right-4">
-        <button onClick={handleLogout} className="bg-red-500 text-white p-2 rounded hover:bg-red-600">
+        <button onClick={handleFetchFollowers} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+          Show Followers
+        </button>
+        <button onClick={handleLogout} className="ml-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
           Logout
         </button>
       </div>
@@ -339,19 +373,36 @@ export default function CalendarPage() {
         </div>
       )}
 
-      <div className="mt-4">
-        <h2 className="text-xl font-bold">Following Users</h2>
-        <ul className="mt-2">
-          {followingUsers.length > 0 ? (
-            followingUsers.map((user) => (
-              <li key={user.id} className="p-2 border-b">
-                {user.username}
-              </li>
-            ))
-          ) : (
-            <p>No following users.</p>
-          )}
-        </ul>
+      <div className="absolute top-20 right-4 w-64">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold text-right">Following</h2>
+          <ul className="mt-2 text-right">
+            {followingUsers.length > 0 ? (
+              followingUsers.map((user) => (
+                <li key={user.id} className="p-2 border-b">
+                  {user.username}
+                </li>
+              ))
+            ) : (
+              <p>No following users.</p>
+            )}
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold text-right">Followers</h2>
+          <ul className="mt-2 text-right">
+            {followers.length > 0 ? (
+              followers.map((user) => (
+                <li key={user.id} className="p-2 border-b">
+                  {user.username} ({user.email})
+                </li>
+              ))
+            ) : (
+              <p>No followers found.</p>
+            )}
+          </ul>
+        </div>
       </div>
     </div>
   );
