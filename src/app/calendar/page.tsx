@@ -38,6 +38,7 @@ export default function CalendarPage() {
   const [newTitle, setNewTitle] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedEventId, setSelectedEventId] = useState("");
+  const [followingUsers, setFollowingUsers] = useState<User[]>([]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -46,6 +47,7 @@ export default function CalendarPage() {
       } else {
         setCurrentUserId(data.session.user.id);
         fetchEntries(data.session.user.id); // ユーザーIDでエントリーを取得
+        fetchFollowingUsers(data.session.user.id); // Fetch following users
         console.log("Current User ID:", data.session.user.id); // Example usage
       }
     });
@@ -65,6 +67,30 @@ export default function CalendarPage() {
       setEntries(data);
     }
     setLoading(false);
+  };
+
+  const fetchFollowingUsers = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('Follows')
+      .select('following_id')
+      .eq('follower_id', userId);
+
+    if (error) {
+      console.error('Error fetching following users:', error);
+    } else {
+      // Fetch user details for following users
+      const followingUserIds = data.map((follow) => follow.following_id);
+      const { data: usersData, error: usersError } = await supabase
+        .from('Users')
+        .select('id, username, email')
+        .in('id', followingUserIds);
+
+      if (usersError) {
+        console.error('Error fetching users data:', usersError);
+      } else {
+        setFollowingUsers(usersData); // Set following users
+      }
+    }
   };
 
   const handleLogout = async () => {
@@ -312,6 +338,21 @@ export default function CalendarPage() {
           </div>
         </div>
       )}
+
+      <div className="mt-4">
+        <h2 className="text-xl font-bold">Following Users</h2>
+        <ul className="mt-2">
+          {followingUsers.length > 0 ? (
+            followingUsers.map((user) => (
+              <li key={user.id} className="p-2 border-b">
+                {user.username}
+              </li>
+            ))
+          ) : (
+            <p>No following users.</p>
+          )}
+        </ul>
+      </div>
     </div>
   );
 }
