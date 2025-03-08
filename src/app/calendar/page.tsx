@@ -40,6 +40,10 @@ export default function CalendarPage() {
   const [selectedEventId, setSelectedEventId] = useState("");
   const [followingUsers, setFollowingUsers] = useState<User[]>([]);
   const [followers, setFollowers] = useState<User[]>([]);
+  
+  // Modal state
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -103,8 +107,9 @@ export default function CalendarPage() {
     if (error) {
       console.error('Error fetching followers:', error);
     } else {
-      // Fetch user details for followers
+      // follower_id の配列を抽出
       const followerIds = data.map((follow) => follow.follower_id);
+      // Users テーブルから follower の詳細情報を取得
       const { data: usersData, error: usersError } = await supabase
         .from('Users')
         .select('id, username, email')
@@ -121,6 +126,7 @@ export default function CalendarPage() {
   const handleFetchFollowers = () => {
     if (currentUserId) {
       fetchFollowers(currentUserId); // Fetch followers when button is clicked
+      setShowFollowersModal(true); // Open followers modal
     }
   };
 
@@ -262,8 +268,11 @@ export default function CalendarPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
       <h1 className="text-2xl font-bold">My Calendar</h1>
       <div className="absolute top-4 right-4">
-        <button onClick={handleFetchFollowers} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          Show Followers
+        <button onClick={() => setShowFollowingModal(true)} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+          フォロー中
+        </button>
+        <button onClick={handleFetchFollowers} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2">
+          フォロワー
         </button>
         <button onClick={handleLogout} className="ml-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
           Logout
@@ -288,17 +297,17 @@ export default function CalendarPage() {
           {searchResults.length > 0 && (
             <ul className="mt-2">
               {searchResults.map((user) => (
-              <li
-                key={user.id}
-                onClick={() => {
-                  setUserName(user.username);
-                  handleUserClick(user.id);
-                }}
-                className="cursor-pointer"
-              >
-                {user.username} ({user.email})
-              </li>
-            ))}
+                <li
+                  key={user.id}
+                  onClick={() => {
+                    setUserName(user.username);
+                    handleUserClick(user.id);
+                  }}
+                  className="cursor-pointer"
+                >
+                  {user.username} ({user.email})
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -373,37 +382,51 @@ export default function CalendarPage() {
         </div>
       )}
 
-      <div className="absolute top-20 right-4 w-64">
-        <div className="mb-4">
-          <h2 className="text-xl font-bold text-right">Following</h2>
-          <ul className="mt-2 text-right">
-            {followingUsers.length > 0 ? (
-              followingUsers.map((user) => (
-                <li key={user.id} className="p-2 border-b">
-                  {user.username}
-                </li>
-              ))
-            ) : (
-              <p>No following users.</p>
-            )}
-          </ul>
+      {/* Following Users Modal */}
+      {showFollowingModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-80">
+            <h2 className="text-xl font-bold">フォロー中</h2>
+            <ul className="mt-2">
+              {followingUsers.length > 0 ? (
+                followingUsers.map((user) => (
+                  <li key={user.id} className="p-2 border-b cursor-pointer" onClick={() => handleUserClick(user.id)}>
+                    {user.username}
+                  </li>
+                ))
+              ) : (
+                <p>No following users.</p>
+              )}
+            </ul>
+            <button onClick={() => setShowFollowingModal(false)} className="mt-4 bg-gray-500 text-white px-4 py-2 rounded">
+              Close
+            </button>
+          </div>
         </div>
+      )}
 
-        <div>
-          <h2 className="text-xl font-bold text-right">Followers</h2>
-          <ul className="mt-2 text-right">
-            {followers.length > 0 ? (
-              followers.map((user) => (
-                <li key={user.id} className="p-2 border-b">
-                  {user.username} ({user.email})
-                </li>
-              ))
-            ) : (
-              <p>No followers found.</p>
-            )}
-          </ul>
+      {/* Followers Modal */}
+      {showFollowersModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg w-80">
+            <h2 className="text-xl font-bold">フォロワー</h2>
+            <ul className="mt-2">
+              {followers.length > 0 ? (
+                followers.map((user) => (
+                  <li key={user.id} className="p-2 border-b cursor-pointer" onClick={() => handleUserClick(user.id)}>
+                    {user.username} ({user.email})
+                  </li>
+                ))
+              ) : (
+                <p>No followers found.</p>
+              )}
+            </ul>
+            <button onClick={() => setShowFollowersModal(false)} className="mt-4 bg-gray-500 text-white px-4 py-2 rounded">
+              Close
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
