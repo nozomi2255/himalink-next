@@ -7,6 +7,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { HomeIcon } from '@heroicons/react/24/outline';
 
 interface Entry {
   id: string;
@@ -129,12 +130,20 @@ export default function OtherCalendarPage() {
   };
 
   return (
+    // ホームに戻るボタン
     <div className="p-4">
       <h1 className="text-2xl font-bold">{userName ? `${userName}'s Calendar` : "Loading..."}</h1>
+      <button
+        onClick={() => router.push('/calendar')}
+        className="mt-4 flex items-center bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+      >
+        <HomeIcon className="h-5 w-5 mr-2" />
+      </button>
       {loading ? (
         <p>Loading entries...</p>
       ) : (
         <div className="mt-4">
+          {/* カレンダー表示 */}
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="dayGridMonth"
@@ -152,6 +161,7 @@ export default function OtherCalendarPage() {
       {currentUserId && <p>Current User ID: {currentUserId}</p>}
       <div className="mt-4">
         {isFollowing ? (
+          // フォロー解除ボタン
           <button
             onClick={handleUnfollow}
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
@@ -159,6 +169,7 @@ export default function OtherCalendarPage() {
             Unfollow
           </button>
         ) : (
+          // フォローするボタン
           <button
             onClick={handleFollow}
             className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
