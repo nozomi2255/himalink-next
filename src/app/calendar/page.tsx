@@ -8,7 +8,9 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
+import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
+// Entryインターフェースの定義
 interface Entry {
   id: string;
   user_id: string;
@@ -19,6 +21,7 @@ interface Entry {
   is_all_day: boolean;
 }
 
+// Userインターフェースの定義
 interface User { // Define the User interface
   id: string;
   username: string;
@@ -26,86 +29,90 @@ interface User { // Define the User interface
 }
 
 export default function CalendarPage() {
-  const router = useRouter();
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [searchEmail, setSearchEmail] = useState<string>("");
-  const [searchResults, setSearchResults] = useState<User[]>([]);
-  const [showSearch, setShowSearch] = useState<boolean>(false);
-  const [showForm, setShowForm] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [selectedDate, setSelectedDate] = useState("");
-  const [selectedEventId, setSelectedEventId] = useState("");
-  const [followingUsers, setFollowingUsers] = useState<User[]>([]);
-  const [followers, setFollowers] = useState<User[]>([]);
-  
-  // Modal state
+  const router = useRouter(); // Next.jsのルーターを使用
+  const [entries, setEntries] = useState<Entry[]>([]); // カレンダーのエントリーを格納するステート
+  const [loading, setLoading] = useState(true); // ローディング状態を管理するステート
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null); // 現在のユーザーID
+  const [userName, setUserName] = useState<string | null>(null); // 現在のユーザー名
+  const [searchEmail, setSearchEmail] = useState<string>(""); // 検索用のメールアドレス
+  const [searchResults, setSearchResults] = useState<User[]>([]); // 検索結果を格納するステート
+  const [showSearch, setShowSearch] = useState<boolean>(false); // 検索フォームの表示状態
+  const [showForm, setShowForm] = useState(false); // イベント追加/編集フォームの表示状態
+  const [newTitle, setNewTitle] = useState(""); // 新しいイベントのタイトル
+  const [selectedDate, setSelectedDate] = useState(""); // 選択された日付
+  const [selectedEventId, setSelectedEventId] = useState(""); // 選択されたイベントのID
+  const [followingUsers, setFollowingUsers] = useState<User[]>([]); // フォロー中のユーザー
+  const [followers, setFollowers] = useState<User[]>([]); // フォロワー
+
+  // モーダルの表示状態
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
 
+  // コンポーネントのマウント時にセッションを確認し、エントリーを取得
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) {
         router.replace('/auth'); // 未ログインの場合、認証画面にリダイレクト
       } else {
-        setCurrentUserId(data.session.user.id);
+        setCurrentUserId(data.session.user.id); // 現在のユーザーIDを設定
         fetchEntries(data.session.user.id); // ユーザーIDでエントリーを取得
-        fetchFollowingUsers(data.session.user.id); // Fetch following users
-        console.log("Current User ID:", data.session.user.id); // Example usage
+        fetchFollowingUsers(data.session.user.id); // フォロー中のユーザーを取得
+        console.log("Current User ID:", data.session.user.id); // デバッグ用
       }
     });
   }, [router]);
 
+  // ユーザーのエントリーを取得する関数
   const fetchEntries = async (userId: string) => {
-    setLoading(true);
+    setLoading(true); // ローディング開始
     const { data, error } = await supabase
       .from('Entries')
       .select('id, user_id, title, content, start_time, end_time, is_all_day')
       .eq('user_id', userId) // ユーザーIDでフィルタリング
-      .order('start_time', { ascending: true });
+      .order('start_time', { ascending: true }); // 開始時間でソート
 
     if (error) {
-      console.error('Error fetching entries:', error);
+      console.error('Error fetching entries:', error); // エラーハンドリング
     } else {
-      setEntries(data);
+      setEntries(data); // エントリーをステートに設定
     }
-    setLoading(false);
+    setLoading(false); // ローディング終了
   };
 
+  // フォロー中のユーザーを取得する関数
   const fetchFollowingUsers = async (userId: string) => {
     const { data, error } = await supabase
       .from('Follows')
       .select('following_id')
-      .eq('follower_id', userId);
+      .eq('follower_id', userId); // フォロワーIDでフィルタリング
 
     if (error) {
-      console.error('Error fetching following users:', error);
+      console.error('Error fetching following users:', error); // エラーハンドリング
     } else {
-      // Fetch user details for following users
+      // フォロー中のユーザーの詳細を取得
       const followingUserIds = data.map((follow) => follow.following_id);
       const { data: usersData, error: usersError } = await supabase
         .from('Users')
         .select('id, username, email')
-        .in('id', followingUserIds);
+        .in('id', followingUserIds); // フォロー中のユーザーのIDでフィルタリング
 
       if (usersError) {
-        console.error('Error fetching users data:', usersError);
+        console.error('Error fetching users data:', usersError); // エラーハンドリング
       } else {
-        setFollowingUsers(usersData); // Set following users
+        setFollowingUsers(usersData); // フォロー中のユーザーをステートに設定
       }
     }
   };
 
+  // フォロワーを取得する関数
   const fetchFollowers = async (userId: string) => {
     const { data, error } = await supabase
       .from('Follows')
       .select('follower_id')
-      .eq('following_id', userId);
+      .eq('following_id', userId); // フォロー中のユーザーIDでフィルタリング
 
     if (error) {
-      console.error('Error fetching followers:', error);
+      console.error('Error fetching followers:', error); // エラーハンドリング
     } else {
       // follower_id の配列を抽出
       const followerIds = data.map((follow) => follow.follower_id);
@@ -116,24 +123,26 @@ export default function CalendarPage() {
         .in('id', followerIds);
         
       if (usersError) {
-        console.error('Error fetching followers details:', usersError);
+        console.error('Error fetching followers details:', usersError); // エラーハンドリング
       } else {
-        setFollowers(usersData); // Set followers
+        setFollowers(usersData); // フォロワーをステートに設定
       }
     }
   };
 
+  // フォロワーを取得する関数を呼び出す
   const handleFetchFollowers = () => {
     if (currentUserId) {
-      fetchFollowers(currentUserId); // Fetch followers when button is clicked
-      setShowFollowersModal(true); // Open followers modal
+      fetchFollowers(currentUserId); // フォロワーを取得
+      setShowFollowersModal(true); // フォロワーモーダルを表示
     }
   };
 
+  // ログアウト処理
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Logout error:', error);
+      console.error('Logout error:', error); // エラーハンドリング
     } else {
       router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
     }
@@ -147,12 +156,13 @@ export default function CalendarPage() {
       .ilike("email", `%${searchEmail}%`); // メールアドレスで検索
 
     if (error) {
-      console.error("Error searching users:", error);
+      console.error("Error searching users:", error); // エラーハンドリング
     } else {
-      setSearchResults(data);
+      setSearchResults(data); // 検索結果をステートに設定
     }
   };
 
+  // ユーザークリック時の処理
   const handleUserClick = (userId: string) => {
     // ユーザーのカレンダーを表示するためにリダイレクト
     router.push(`/other-calendar/${userId}`);
@@ -208,7 +218,7 @@ export default function CalendarPage() {
       .eq("id", selectedEventId); // IDでフィルタリング
 
     if (error) {
-      console.error("Error updating event:", error);
+      console.error("Error updating event:", error); // エラーハンドリング
     } else {
       fetchEntries(currentUserId); // 一覧を更新
       setShowForm(false); // フォームを非表示
@@ -226,7 +236,7 @@ export default function CalendarPage() {
       .eq("id", selectedEventId); // IDでフィルタリング
 
     if (error) {
-      console.error("Error deleting event:", error);
+      console.error("Error deleting event:", error); // エラーハンドリング
     } else {
       if (currentUserId) { // currentUserIdがnullでないことを確認
         fetchEntries(currentUserId); // 一覧を更新
@@ -256,7 +266,7 @@ export default function CalendarPage() {
       ]);
 
     if (error) {
-      console.error("Error adding event:", error);
+      console.error("Error adding event:", error); // エラーハンドリング
     } else {
       fetchEntries(currentUserId); // 一覧を更新
       setShowForm(false); // フォームを非表示
@@ -267,6 +277,40 @@ export default function CalendarPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
       <h1 className="text-2xl font-bold">My Calendar</h1>
+      <div className="absolute top-4 left-4 flex items-center">
+        <button onClick={() => setShowSearch(!showSearch)} className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400">
+          <MagnifyingGlassIcon className="h-5 w-5" />
+        </button>
+        {showSearch && (
+          <div className="mt-2">
+            <input
+              type="email"
+              placeholder="Enter email address"
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              className="border p-2 ml-2" // 入力フォームのスタイル
+            />
+            <button onClick={handleSearch} className="ml-2 btn">Search</button>
+            {userName && <p className="mt-2">Selected user: {userName}</p>}
+            {searchResults.length > 0 && (
+              <ul className="mt-2">
+                {searchResults.map((user) => (
+                  <li
+                    key={user.id}
+                    onClick={() => {
+                      setUserName(user.username);
+                      handleUserClick(user.id);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    {user.username} ({user.email})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
       <div className="absolute top-4 right-4">
         <button onClick={() => setShowFollowingModal(true)} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
           フォロー中
@@ -279,44 +323,10 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      {/* 検索ボタン */}
-      <button onClick={() => setShowSearch(!showSearch)} className="mt-4 btn">
-        {showSearch ? "Close Search" : "Search User"}
-      </button>
-      {showSearch && (
-        <div className="mt-2">
-          <input
-            type="email"
-            placeholder="Enter email address"
-            value={searchEmail}
-            onChange={(e) => setSearchEmail(e.target.value)}
-            className="border p-2"
-          />
-          <button onClick={handleSearch} className="ml-2 btn">Search</button>
-          {userName && <p className="mt-2">Selected user: {userName}</p>}
-          {searchResults.length > 0 && (
-            <ul className="mt-2">
-              {searchResults.map((user) => (
-                <li
-                  key={user.id}
-                  onClick={() => {
-                    setUserName(user.username);
-                    handleUserClick(user.id);
-                  }}
-                  className="cursor-pointer"
-                >
-                  {user.username} ({user.email})
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-
       {loading ? (
         <p>Loading entries...</p>
       ) : (
-        <div className="w-full max-w-4xl mt-4">
+        <div className="w-full h-[calc(100vh-200px)] mt-4"> {/* FullCalendarを画面いっぱいに表示 */}
           <FullCalendar
             plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
             initialView="dayGridMonth"
@@ -330,6 +340,7 @@ export default function CalendarPage() {
             selectable={!showForm}
             dateClick={handleDateClick}
             eventClick={handleEventClick}
+            height="100%" // 高さを100%に設定
           />
         </div>
       )}
