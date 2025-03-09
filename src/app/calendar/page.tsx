@@ -9,6 +9,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import UserAvatar from '../../../components/UserAvatar'; // UserAvatarをインポート
 
 // Entryインターフェースの定義
 interface Entry {
@@ -288,15 +289,12 @@ export default function CalendarPage() {
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
       <h1 className="text-2xl font-bold">My Calendar</h1>
       <div className="absolute top-4 left-4 flex items-center">
-        <div onClick={() => router.push('/profile')} className="cursor-pointer">
-          {userAvatarUrl ? (
-            <img src={userAvatarUrl} alt="プロフィール画像" className="w-10 h-10 rounded-full object-cover" />
-          ) : (
-            <div className="w-10 h-10 flex items-center justify-center bg-gray-300 rounded-full">
-              <span className="text-lg font-bold">{userName ? userName.charAt(0) : "?"}</span> {/* ユーザー名の頭文字を表示 */}
-            </div>
-          )}
-        </div>
+        <UserAvatar
+          avatarUrl={userAvatarUrl} // ユーザーのアバターURL
+          username={userName || "?"} // ユーザー名
+          onClick={() => router.push('/profile')} // プロフィールページへの遷移
+          size={40} // サイズを指定
+        />
         <button onClick={() => setShowSearch(!showSearch)} className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400">
           <MagnifyingGlassIcon className="h-5 w-5" />
         </button>

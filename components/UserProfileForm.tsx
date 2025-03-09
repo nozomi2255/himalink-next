@@ -3,6 +3,7 @@
 
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import UserAvatar from "./UserAvatar"; // UserAvatarをインポート
 
 interface UserProfile {
   id: string;
@@ -21,19 +22,18 @@ export default function UserProfileForm({ profile }: Props) {
   const [username, setUsername] = useState(profile.username);
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [bio, setBio] = useState(profile.bio || "");
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // アップロードする画像ファイル
 
   // プロフィールを更新する関数
   const handleUpdate = async () => {
-    let newAvatarUrl = avatarUrl;
+    let newAvatarUrl = profile.avatar_url;
 
     // 画像ファイルが選択されている場合、アップロード処理を行う
     if (avatarFile) {
       // ファイルパスの指定: バケット "avatars" 内のパスは `${profile.id}/${avatarFile.name}`
       const filePath = `${profile.id}/${avatarFile.name}`;
 
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("avatars") // ストレージバケット名
         .upload(filePath, avatarFile, { upsert: true }); // ユーザーIDを使ってユニークなパスに保存
 
@@ -84,7 +84,7 @@ export default function UserProfileForm({ profile }: Props) {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target) {
-            setAvatarUrl(event.target.result as string); // プレビュー用に画像URLを設定
+            // プレビュー用に画像URLを設定
           }
         };
         reader.readAsDataURL(files[0]); // 画像をData URLとして読み込む
@@ -96,13 +96,12 @@ export default function UserProfileForm({ profile }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
-        <button onClick={handleAvatarChange} className="w-20 h-20 flex items-center justify-center bg-gray-300 rounded-full">
-          {avatarUrl ? (
-            <img src={avatarUrl} alt="プロフィール画像" className="w-20 h-20 rounded-full object-cover" />
-          ) : (
-            <span className="text-2xl font-bold">{profile.username.charAt(0)}</span> // ユーザー名の頭文字を表示
-          )}
-        </button>
+        <UserAvatar
+          avatarUrl={profile.avatar_url}
+          username={profile.username}
+          onClick={handleAvatarChange} // 画像変更のためのクリックハンドラ
+          size={80} // サイズを指定
+        />
       </div>
       <div>
         <label className="block font-bold">ユーザー名</label>
