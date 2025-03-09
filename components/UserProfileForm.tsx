@@ -21,7 +21,7 @@ export default function UserProfileForm({ profile }: Props) {
   const [username, setUsername] = useState(profile.username);
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [bio, setBio] = useState(profile.bio || "");
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || "/default-avatar.png");
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // アップロードする画像ファイル
 
   // プロフィールを更新する関数
@@ -32,7 +32,7 @@ export default function UserProfileForm({ profile }: Props) {
     if (avatarFile) {
       const { data, error: uploadError } = await supabase.storage
         .from("avatars") // ストレージバケット名
-        .upload(`public/${profile.id}/${avatarFile.name}`, avatarFile); // ユーザーIDを使ってユニークなパスに保存
+        .upload(`${profile.id}/${avatarFile.name}`, avatarFile); // ユーザーIDを使ってユニークなパスに保存
 
       if (uploadError) {
         alert("画像のアップロードに失敗しました。");
@@ -61,28 +61,39 @@ export default function UserProfileForm({ profile }: Props) {
     }
   };
 
+  // プロフィール画像を変更する関数
+  const handleAvatarChange = () => {
+    // 画像アップロードの処理をここに実装
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement; // e.targetをHTMLInputElementにキャスト
+      const files = target.files; // filesを取得
+      if (files && files.length > 0) {
+        setAvatarFile(files[0]); // 選択されたファイルをステートに設定
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target) {
+            setAvatarUrl(event.target.result as string); // プレビュー用に画像URLを設定
+          }
+        };
+        reader.readAsDataURL(files[0]); // 画像をData URLとして読み込む
+      }
+    };
+    fileInput.click(); // ファイル選択ダイアログを開く
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
-        <img src={avatarUrl} alt="プロフィール画像" className="w-20 h-20 rounded-full object-cover" />
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => {
-            const files = e.target.files; // ファイルリストを取得
-            if (files && files.length > 0) { // ファイルが選択されているか確認
-              setAvatarFile(files[0]); // 選択されたファイルをステートに設定
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                if (event.target) {
-                  setAvatarUrl(event.target.result as string); // プレビュー用に画像URLを設定
-                }
-              };
-              reader.readAsDataURL(files[0]); // 画像をData URLとして読み込む
-            }
-          }}
-          className="border p-2"
-        />
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="プロフィール画像" className="w-20 h-20 rounded-full object-cover" />
+        ) : (
+          <button onClick={handleAvatarChange} className="w-20 h-20 flex items-center justify-center bg-gray-300 rounded-full">
+            <span className="text-2xl font-bold">{profile.username.charAt(0)}</span> {/* ユーザー名の頭文字を表示 */}
+          </button>
+        )}
       </div>
       <div>
         <label className="block font-bold">ユーザー名</label>

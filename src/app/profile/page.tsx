@@ -45,6 +45,12 @@ export default function ProfilePage() {
   // ローディング中はメッセージを表示
   if (loading) return <p>Loading...</p>;
 
+  // プロフィール画像を変更する関数
+  const handleAvatarChange = () => {
+    // 画像アップロードの処理をここに実装
+    console.log("Change avatar clicked");
+  };
+
   return (
     <>
       <Head>
