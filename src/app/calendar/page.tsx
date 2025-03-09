@@ -22,10 +22,12 @@ interface Entry {
 }
 
 // Userインターフェースの定義
-interface User { // Define the User interface
+interface User {
   id: string;
   username: string;
   email: string;
+  full_name?: string;
+  avatar_url?: string | null;
 }
 
 export default function CalendarPage() {
@@ -34,6 +36,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true); // ローディング状態を管理するステート
   const [currentUserId, setCurrentUserId] = useState<string | null>(null); // 現在のユーザーID
   const [userName, setUserName] = useState<string | null>(null); // 現在のユーザー名
+  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null); // 現在のユーザーのアバターURL
   const [searchEmail, setSearchEmail] = useState<string>(""); // 検索用のメールアドレス
   const [searchResults, setSearchResults] = useState<User[]>([]); // 検索結果を格納するステート
   const [showSearch, setShowSearch] = useState<boolean>(false); // 検索フォームの表示状態
@@ -57,10 +60,27 @@ export default function CalendarPage() {
         setCurrentUserId(data.session.user.id); // 現在のユーザーIDを設定
         fetchEntries(data.session.user.id); // ユーザーIDでエントリーを取得
         fetchFollowingUsers(data.session.user.id); // フォロー中のユーザーを取得
+        fetchUserProfile(data.session.user.id); // ユーザーのプロフィールを取得
         console.log("Current User ID:", data.session.user.id); // デバッグ用
       }
     });
   }, [router]);
+
+  // ユーザーのプロフィールを取得する関数
+  const fetchUserProfile = async (userId: string) => {
+    const { data, error } = await supabase
+      .from("Users")
+      .select("username, avatar_url")
+      .eq("id", userId)
+      .single(); // ユーザーIDでフィルタリングし、1件取得
+
+    if (error) {
+      console.error('Error fetching user profile:', error); // エラーハンドリング
+    } else {
+      setUserName(data.username); // ユーザー名を設定
+      setUserAvatarUrl(data.avatar_url); // アバターURLを設定
+    }
+  };
 
   // ユーザーのエントリーを取得する関数
   const fetchEntries = async (userId: string) => {
