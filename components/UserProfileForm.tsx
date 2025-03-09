@@ -30,17 +30,25 @@ export default function UserProfileForm({ profile }: Props) {
 
     // 画像ファイルが選択されている場合、アップロード処理を行う
     if (avatarFile) {
-      const { data, error: uploadError } = await supabase.storage
+      // ファイルパスの指定: バケット "avatars" 内のパスは `${profile.id}/${avatarFile.name}`
+      const filePath = `${profile.id}/${avatarFile.name}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("avatars") // ストレージバケット名
-        .upload(`${profile.id}/${avatarFile.name}`, avatarFile); // ユーザーIDを使ってユニークなパスに保存
+        .upload(filePath, avatarFile, { upsert: true }); // ユーザーIDを使ってユニークなパスに保存
 
       if (uploadError) {
         alert("画像のアップロードに失敗しました。");
+        console.error("Upload error:", uploadError);
         return;
       }
 
       // アップロードした画像のURLを取得
-      newAvatarUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/public/${profile.id}/${avatarFile.name}`;
+      const { data: publicUrlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      newAvatarUrl = publicUrlData.publicUrl; // 新しいアバターURLを設定
     }
 
     // ユーザー情報を更新
@@ -56,6 +64,7 @@ export default function UserProfileForm({ profile }: Props) {
 
     if (error) {
       alert("プロフィール更新に失敗しました。");
+      console.error("Profile update error:", error);
     } else {
       alert("プロフィールが更新されました！");
     }
@@ -87,13 +96,13 @@ export default function UserProfileForm({ profile }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
-        {avatarUrl ? (
-          <img src={avatarUrl} alt="プロフィール画像" className="w-20 h-20 rounded-full object-cover" />
-        ) : (
-          <button onClick={handleAvatarChange} className="w-20 h-20 flex items-center justify-center bg-gray-300 rounded-full">
-            <span className="text-2xl font-bold">{profile.username.charAt(0)}</span> {/* ユーザー名の頭文字を表示 */}
-          </button>
-        )}
+        <button onClick={handleAvatarChange} className="w-20 h-20 flex items-center justify-center bg-gray-300 rounded-full">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="プロフィール画像" className="w-20 h-20 rounded-full object-cover" />
+          ) : (
+            <span className="text-2xl font-bold">{profile.username.charAt(0)}</span> // ユーザー名の頭文字を表示
+          )}
+        </button>
       </div>
       <div>
         <label className="block font-bold">ユーザー名</label>

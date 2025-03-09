@@ -158,16 +158,6 @@ export default function CalendarPage() {
     }
   };
 
-  // ログアウト処理
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Logout error:', error); // エラーハンドリング
-    } else {
-      router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
-    }
-  };
-
   // ユーザー検索処理
   const handleSearch = async () => {
     const { data, error } = await supabase
@@ -346,9 +336,6 @@ export default function CalendarPage() {
         </button>
         <button onClick={handleFetchFollowers} className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-2">
           フォロワー
-        </button>
-        <button onClick={handleLogout} className="ml-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
-          Logout
         </button>
       </div>
 
