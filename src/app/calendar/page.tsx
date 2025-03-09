@@ -4,12 +4,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
-import UserAvatar from '../../../components/UserAvatar'; // UserAvatarをインポート
+import CalendarHeader from "../../../components/CalendarHeader";
+import CalendarView from "../../../components/CalendarView";
+import EventFormModal from "../../../components/EventFormModal";
+import FollowingModal from '../../../components/FollowingModal';
+import FollowersModal from '../../../components/FollowersModal';
+import UserSearchModal from '../../../components/UserSearchModal';
 
 // Entryインターフェースの定義
 interface Entry {
@@ -51,6 +51,7 @@ export default function CalendarPage() {
   // モーダルの表示状態
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [showUserSearchModal, setShowUserSearchModal] = useState(false); // ユーザー検索モーダルの表示状態
 
   // コンポーネントのマウント時にセッションを確認し、エントリーを取得
   useEffect(() => {
@@ -170,6 +171,7 @@ export default function CalendarPage() {
       console.error("Error searching users:", error); // エラーハンドリング
     } else {
       setSearchResults(data); // 検索結果をステートに設定
+      setShowUserSearchModal(true); // 検索結果モーダルを表示
     }
   };
 
@@ -287,47 +289,24 @@ export default function CalendarPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-      <h1 className="text-2xl font-bold">My Calendar</h1>
-      <div className="absolute top-4 left-4 flex items-center">
-        <UserAvatar
-          avatarUrl={userAvatarUrl} // ユーザーのアバターURL
-          username={userName || "?"} // ユーザー名
-          onClick={() => router.push('/profile')} // プロフィールページへの遷移
-          size={40} // サイズを指定
+      <CalendarHeader
+        userAvatarUrl={userAvatarUrl}
+        userName={userName}
+        showSearch={showSearch}
+        setShowSearch={setShowSearch}
+        searchEmail={searchEmail}
+        setSearchEmail={setSearchEmail}
+        handleSearch={handleSearch}
+      />
+
+      {/* ユーザー検索モーダル */}
+      {showUserSearchModal && (
+        <UserSearchModal
+          searchResults={searchResults}
+          onClose={() => setShowUserSearchModal(false)}
+          onUserClick={handleUserClick}
         />
-        <button onClick={() => setShowSearch(!showSearch)} className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400">
-          <MagnifyingGlassIcon className="h-5 w-5" />
-        </button>
-        {showSearch && (
-          <div className="mt-2">
-            <input
-              type="email"
-              placeholder="Enter email address"
-              value={searchEmail}
-              onChange={(e) => setSearchEmail(e.target.value)}
-              className="border p-2 ml-2" // 入力フォームのスタイル
-            />
-            <button onClick={handleSearch} className="ml-2 btn">Search</button>
-            {userName && <p className="mt-2">Selected user: {userName}</p>}
-            {searchResults.length > 0 && (
-              <ul className="mt-2">
-                {searchResults.map((user) => (
-                  <li
-                    key={user.id}
-                    onClick={() => {
-                      setUserName(user.username);
-                      handleUserClick(user.id);
-                    }}
-                    className="cursor-pointer"
-                  >
-                    {user.username} ({user.email})
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </div>
+      )}
       <div className="absolute top-4 right-4">
         <button onClick={() => setShowFollowingModal(true)} className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
           フォロー中
@@ -340,117 +319,42 @@ export default function CalendarPage() {
       {loading ? (
         <p>Loading entries...</p>
       ) : (
-        <div className="w-full h-[calc(100vh-200px)] mt-4"> {/* FullCalendarを画面いっぱいに表示 */}
-          <FullCalendar
-            plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
-            events={events}
-            editable={true}
-            selectable={!showForm}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            height="100%" // 高さを100%に設定
-          />
-        </div>
+        <CalendarView
+          events={events}
+          handleDateClick={handleDateClick}
+          handleEventClick={handleEventClick}
+        />
       )}
 
       {showForm && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-white bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded shadow-lg">
-            <h2 className="text-xl mb-4">
-              {selectedEventId ? `Edit Event on ${selectedDate}` : `Add Event on ${selectedDate}`}
-            </h2>
-            <input
-              type="text"
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Enter event title"
-              className="border p-2 w-full mb-4"
-            />
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowForm(false)}
-                className="mr-2 bg-gray-500 text-white px-4 py-2 rounded"
-              >
-                Cancel
-              </button>
-              {selectedEventId ? (
-                <>
-                  <button
-                    onClick={handleUpdateEvent}
-                    className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
-                  >
-                    Update
-                  </button>
-                  <button
-                    onClick={handleDeleteEvent}
-                    className="bg-red-500 text-white px-4 py-2 rounded"
-                  >
-                    Delete
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleAddEvent}
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
-                >
-                  Save
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+        <EventFormModal
+          selectedDate={selectedDate}
+          newTitle={newTitle}
+          setNewTitle={setNewTitle}
+          setShowForm={setShowForm}
+          selectedEventId={selectedEventId}
+          handleUpdateEvent={handleUpdateEvent}
+          handleDeleteEvent={handleDeleteEvent}
+          handleAddEvent={handleAddEvent}
+        />
       )}
 
       {/* Following Users Modal */}
       {showFollowingModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-80">
-            <h2 className="text-xl font-bold">フォロー中</h2>
-            <ul className="mt-2">
-              {followingUsers.length > 0 ? (
-                followingUsers.map((user) => (
-                  <li key={user.id} className="p-2 border-b cursor-pointer" onClick={() => handleUserClick(user.id)}>
-                    {user.username}
-                  </li>
-                ))
-              ) : (
-                <p>No following users.</p>
-              )}
-            </ul>
-            <button onClick={() => setShowFollowingModal(false)} className="mt-4 bg-gray-500 text-white px-4 py-2 rounded">
-              Close
-            </button>
-          </div>
-        </div>
+        <FollowingModal
+          followingUsers={followingUsers}
+          onClose={() => setShowFollowingModal(false)}
+          onUserClick={(userId) => { handleUserClick(userId) }}
+        />
       )}
 
       {/* Followers Modal */}
       {showFollowersModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg w-80">
-            <h2 className="text-xl font-bold">フォロワー</h2>
-            <ul className="mt-2">
-              {followers.length > 0 ? (
-                followers.map((user) => (
-                  <li key={user.id} className="p-2 border-b cursor-pointer" onClick={() => handleUserClick(user.id)}>
-                    {user.username} ({user.email})
-                  </li>
-                ))
-              ) : (
-                <p>No followers found.</p>
-              )}
-            </ul>
-            <button onClick={() => setShowFollowersModal(false)} className="mt-4 bg-gray-500 text-white px-4 py-2 rounded">
-              Close
-            </button>
-          </div>
-        </div>
+        <FollowersModal
+          followers={followers}
+          onClose={() => setShowFollowersModal(false)}
+          onUserClick={(userId) => { handleUserClick(userId) }}
+        />
       )}
     </div>
   );

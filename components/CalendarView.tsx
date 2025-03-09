@@ -1,0 +1,35 @@
+"use client";
+
+import React from "react";
+import FullCalendar from "@fullcalendar/react";
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import interactionPlugin from "@fullcalendar/interaction";
+
+interface CalendarViewProps {
+  events: any[];
+  handleDateClick: (arg: { dateStr: string }) => void;
+  handleEventClick: (arg: { event: { id: string } }) => void;
+}
+
+export default function CalendarView({ events, handleDateClick, handleEventClick }: CalendarViewProps) {
+  return (
+    <div className="w-full h-[calc(100vh-200px)] mt-4">
+      <FullCalendar
+        plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
+        initialView="dayGridMonth"
+        headerToolbar={{
+          left: "prev,next today",
+          center: "title",
+          right: "dayGridMonth,timeGridWeek,timeGridDay",
+        }}
+        events={events}
+        editable={true}
+        selectable={true}
+        dateClick={handleDateClick}
+        eventClick={handleEventClick}
+        height="100%"
+      />
+    </div>
+  );
+}
