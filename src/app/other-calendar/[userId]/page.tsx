@@ -3,10 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { useParams, useRouter } from "next/navigation";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
+import CalendarView from "../../../../components/CalendarView";
 import { HomeIcon } from '@heroicons/react/24/outline';
 
 interface Entry {
@@ -74,7 +71,6 @@ export default function OtherCalendarPage() {
     }
     setLoading(false);
   };
-      
 
   const events = entries.map((entry) => ({
     id: entry.id,
@@ -143,18 +139,10 @@ export default function OtherCalendarPage() {
         <p>Loading entries...</p>
       ) : (
         <div className="mt-4">
-          {/* カレンダー表示 */}
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="dayGridMonth"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay",
-            }}
+          <CalendarView
             events={events}
-            editable={false} // 他人の予定は編集不可とする場合
-            height="auto"
+            handleDateClick={() => {}}
+            handleEventClick={() => {}}
           />
         </div>
       )}
