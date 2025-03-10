@@ -40,7 +40,7 @@ export default function CalendarPage() {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null); // 現在のユーザーのアバターURL
   const [searchEmail, setSearchEmail] = useState<string>(""); // 検索用のメールアドレス
   const [searchResults, setSearchResults] = useState<User[]>([]); // 検索結果を格納するステート
-  const [showSearch, setShowSearch] = useState<boolean>(false); // 検索フォームの表示状態
+  const [showSearchInput, setShowSearchInput] = useState<boolean>(false); // 検索フォームの表示状態
   const [showForm, setShowForm] = useState(false); // イベント追加/編集フォームの表示状態
   const [newTitle, setNewTitle] = useState(""); // 新しいイベントのタイトル
   const [selectedDate, setSelectedDate] = useState(""); // 選択された日付
@@ -287,24 +287,33 @@ export default function CalendarPage() {
     }
   };
 
+  const [showSearch, setShowSearch] = useState<boolean>(false); // 検索フォームの表示状態
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+    <div className="relative min-h-screen p-4 bg-gray-100">
+      {/* ヘッダーを絶対配置 */}
+      <div className="absolute top-0 left-0 w-full z-10">
       <CalendarHeader
         userAvatarUrl={userAvatarUrl}
         userName={userName}
-        showSearch={showSearch}
+        showSearch={true}
         setShowSearch={setShowSearch}
         searchEmail={searchEmail}
         setSearchEmail={setSearchEmail}
         handleSearch={handleSearch}
+        onSearchModalOpen={() => setShowUserSearchModal(true)}
       />
+      </div>
 
       {/* ユーザー検索モーダル */}
       {showUserSearchModal && (
         <UserSearchModal
-          searchResults={searchResults}
+          searchEmail={searchEmail}
+          setSearchEmail={setSearchEmail}
+          handleSearch={handleSearch}
           onClose={() => setShowUserSearchModal(false)}
           onUserClick={handleUserClick}
+          searchResults={searchResults}
         />
       )}
       <div className="absolute top-4 right-4">

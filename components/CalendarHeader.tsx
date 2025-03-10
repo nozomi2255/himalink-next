@@ -13,44 +13,41 @@ interface CalendarHeaderProps {
   searchEmail: string;
   setSearchEmail: (email: string) => void;
   handleSearch: () => void;
+  onAvatarClick?: () => void;
+  onSearchModalOpen: () => void;
 }
 
 export default function CalendarHeader({
   userAvatarUrl,
   userName,
   showSearch,
-  setShowSearch,
-  searchEmail,
-  setSearchEmail,
-  handleSearch,
+  onAvatarClick,
+  onSearchModalOpen,
 }: CalendarHeaderProps) {
   const router = useRouter();
+
+  // onAvatarClick が渡されていない場合は、デフォルトでプロフィール設定へ遷移する
+  const handleAvatarClick = onAvatarClick || (() => router.push('/profile'));
   
   return (
     <div className="absolute top-4 left-4 flex items-center space-x-4">
       <UserAvatar
         avatarUrl={userAvatarUrl}
         username={userName || "?"}
-        onClick={() => router.push('/profile')}
-        size={80}
+        onClick={handleAvatarClick}
+        size={60}
       />
-      <button onClick={() => setShowSearch(!showSearch)} className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400">
-        <MagnifyingGlassIcon className="h-5 w-5" />
-      </button>
+
       {showSearch && (
-        <div className="mt-2">
-          <input
-            type="email"
-            placeholder="メールアドレスを入力"
-            value={searchEmail}
-            onChange={(e) => setSearchEmail(e.target.value)}
-            className="border p-2 ml-2"
-          />
-          <button onClick={handleSearch} className="ml-2 bg-blue-500 text-white px-4 py-2 rounded">
-            検索
-          </button>
-        </div>
+              <div className="mt-2">
+                <button 
+                  onClick={onSearchModalOpen}
+                  className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400"
+                >
+                  <MagnifyingGlassIcon className="h-5 w-5" />
+                </button>
+              </div>
       )}
     </div>
-  );
+  )
 }

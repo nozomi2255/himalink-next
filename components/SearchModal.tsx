@@ -2,23 +2,19 @@
 
 import React from "react";
 
-interface UnifiedSearchModalProps {
+interface SearchModalProps {
   searchEmail: string;
   setSearchEmail: (email: string) => void;
   handleSearch: () => void;
   onClose: () => void;
-  searchResults: { id: string; username: string; email: string }[];
-  onUserClick: (userId: string) => void;
 }
 
-export default function UnifiedSearchModal({
+export default function SearchModal({
   searchEmail,
   setSearchEmail,
   handleSearch,
   onClose,
-  searchResults,
-  onUserClick,
-}: UnifiedSearchModalProps) {
+}: SearchModalProps) {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
       <div className="bg-white p-6 rounded shadow-lg w-80">
@@ -43,23 +39,6 @@ export default function UnifiedSearchModal({
           >
             キャンセル
           </button>
-        </div>
-        <div className="mt-4">
-          {searchResults.length > 0 ? (
-            <ul>
-              {searchResults.map((user) => (
-                <li
-                  key={user.id}
-                  onClick={() => onUserClick(user.id)}
-                  className="cursor-pointer p-2 border-b hover:bg-gray-100"
-                >
-                  {user.username} ({user.email})
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>検索結果がありません</p>
-          )}
         </div>
       </div>
     </div>

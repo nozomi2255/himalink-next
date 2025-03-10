@@ -23,7 +23,7 @@ interface CalendarViewProps {
 
 export default function CalendarView({ events, handleDateClick, handleEventClick }: CalendarViewProps) {
   return (
-    <div className="w-full h-[calc(100vh-200px)] mt-0">
+    <div className="w-full h-[calc(100vh-80px)] mt-0">
       <FullCalendar
         plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
         initialView="dayGridMonth"
