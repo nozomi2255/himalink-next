@@ -40,7 +40,6 @@ export default function CalendarPage() {
   const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null); // 現在のユーザーのアバターURL
   const [searchEmail, setSearchEmail] = useState<string>(""); // 検索用のメールアドレス
   const [searchResults, setSearchResults] = useState<User[]>([]); // 検索結果を格納するステート
-  const [showSearchInput, setShowSearchInput] = useState<boolean>(false); // 検索フォームの表示状態
   const [showForm, setShowForm] = useState(false); // イベント追加/編集フォームの表示状態
   const [newTitle, setNewTitle] = useState(""); // 新しいイベントのタイトル
   const [selectedDate, setSelectedDate] = useState(""); // 選択された日付
