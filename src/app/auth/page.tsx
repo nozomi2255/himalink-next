@@ -13,8 +13,6 @@ interface User {
 export default function AuthPage() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
-  const [signUpEmail, setSignUpEmail] = useState('');
-  const [signUpPassword, setSignUpPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const router = useRouter();
@@ -46,36 +44,6 @@ export default function AuthPage() {
       } else {
         console.error('Login error:', error);
         setError('ログインに失敗しました。しばらくしてから再試行してください。');
-      }
-    } else {
-      setUser(data.user as User);
-    }
-  };
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    const { data, error } = await supabase.auth.signUp({ email: signUpEmail, password: signUpPassword });
-    if (error) {
-      // メール認証が未完了の場合
-      if (error.message.includes("Email not confirmed") || error.code === "USER_NOT_CONFIRMED") {
-        console.error("Email not confirmed. Please verify your email before logging in.");
-        setError("メール認証が完了していません。確認メール内のリンクをクリックしてください。");
-      }
-      // 認証情報が不正な場合
-      else if (error.message.includes("Invalid login credentials") || error.code === "INVALID_LOGIN_CREDENTIALS") {
-        console.error("Invalid login credentials.");
-        setError("メールアドレスまたはパスワードが正しくありません。");
-      }
-      // 既に登録済みの場合（例: User already exists）
-      else if (error.message.includes("User already registered") || error.code === "USER_ALREADY_EXISTS") {
-        console.error("User already registered.");
-        setError("このメールアドレスは既に登録されています。");
-      }
-      // その他のエラー
-      else {
-        console.error("Sign up error:", error);
-        setError("サインアップに失敗しました。しばらくしてから再試行してください。");
       }
     } else {
       setUser(data.user as User);
