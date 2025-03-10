@@ -29,7 +29,8 @@ export default function UserAvatar({
         />
       ) : (
         <div
-          className={`w-${size} h-${size} rounded-full flex items-center justify-center bg-gray-300`}
+          style={{ width: `${size}px`, height: `${size}px` }}
+          className={`rounded-full flex items-center justify-center bg-gray-300`}
         >
           <span className="text-xl font-bold">
             {username.charAt(0).toUpperCase()}
