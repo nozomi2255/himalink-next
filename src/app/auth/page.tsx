@@ -84,7 +84,7 @@ export default function AuthPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4">Login / Sign Up</h1>
+      <h1 className="text-2xl font-bold mb-4">Login</h1>
       <form onSubmit={handleLogin} className="w-full max-w-sm bg-white p-6 rounded shadow-md mb-4">
         <label className="block mb-2">Email:</label>
         <input
@@ -104,26 +104,14 @@ export default function AuthPage() {
         />
         <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Login</button>
       </form>
-      <form onSubmit={handleSignUp} className="w-full max-w-sm bg-white p-6 rounded shadow-md">
-        <h2 className="text-lg font-semibold mb-2">Sign Up</h2>
-        <label className="block mb-2">Email:</label>
-        <input
-          type="email"
-          value={signUpEmail}
-          onChange={(e) => setSignUpEmail(e.target.value)}
-          required
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        />
-        <label className="block mb-2">Password:</label>
-        <input
-          type="password"
-          value={signUpPassword}
-          onChange={(e) => setSignUpPassword(e.target.value)}
-          required
-          className="w-full p-2 border border-gray-300 rounded mb-4"
-        />
-        <button type="submit" className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600">Sign Up</button>
-      </form>
+      <p className="mb-4">アカウント作成がまだの方はこちら: 
+        <button 
+          onClick={() => router.push('/auth/signup')} 
+          className="text-blue-500 hover:underline"
+        >
+          サインアップ
+        </button>
+      </p>
       {error && <p className="text-red-500">{error}</p>}
       {user && <p className="text-green-500">Welcome, {user.email}!</p>}
     </div>
