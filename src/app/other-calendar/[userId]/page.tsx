@@ -145,41 +145,40 @@ export default function OtherCalendarPage() {
           onSearchModalOpen={() => setShowSearchModal(true)}
         />
       </div>
-      <div className="p-4">
+      <div className="relative min-h-screen p-4 bg-gray-100">
+      {/* 右上のボタン群 */}
+      <div className="absolute top-4 right-4 flex flex-row items-end space-x-4 z-10">
         <button
           onClick={() => router.push('/calendar')}
-          className="absolute left-5 top-4 transform -translate-y-1/2 flex items-center bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+          className="flex items-center bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
         >
           <HomeIcon className="h-5 w-5 mr-2" />
         </button>
+        {isFollowing ? (
+          <button
+            onClick={handleUnfollow}
+            className="bg-red-500 text-white px-0 py-2 rounded hover:bg-red-600"
+          >
+            フォロー解除
+          </button>
+        ) : (
+          <button
+            onClick={handleFollow}
+            className="bg-blue-500 text-white px-0 py-2 rounded hover:bg-blue-600"
+          >
+            フォロー
+          </button>
+        )}
+      </div>
         {loading ? (
           <p>Loading entries...</p>
         ) : (
-          <div className="mt-4">
             <CalendarView
               events={events}
               handleDateClick={() => {}}
               handleEventClick={() => {}}
             />
-          </div>
         )}
-        <div className="mt-4">
-          {isFollowing ? (
-            <button
-              onClick={handleUnfollow}
-              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Unfollow
-            </button>
-          ) : (
-            <button
-              onClick={handleFollow}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Follow
-            </button>
-          )}
-        </div>
       </div>
       {showSearchModal && (
         <UserSearchModal

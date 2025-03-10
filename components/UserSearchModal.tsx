@@ -2,7 +2,7 @@
 
 import React from "react";
 
-interface UnifiedSearchModalProps {
+interface UserSearchModalProps {
   searchEmail: string;
   setSearchEmail: (email: string) => void;
   handleSearch: () => void;
@@ -11,16 +11,16 @@ interface UnifiedSearchModalProps {
   onUserClick: (userId: string) => void;
 }
 
-export default function UnifiedSearchModal({
+export default function UserSearchModal({
   searchEmail,
   setSearchEmail,
   handleSearch,
   onClose,
   searchResults,
   onUserClick,
-}: UnifiedSearchModalProps) {
+}: UserSearchModalProps) {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-[999]">
+    <div className="fixed inset-0 flex items-center justify-center z-[999]">
       <div className="bg-white p-6 rounded shadow-lg w-80">
         <h2 className="text-lg font-bold mb-4">ユーザー検索</h2>
         <input
