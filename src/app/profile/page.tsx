@@ -66,18 +66,20 @@ export default function ProfilePage() {
       </Head>
       <div className="max-w-2xl mx-auto p-8 relative">
         <h1 className="text-3xl font-bold mb-4">プロフィール設定</h1>
-        <button
-          onClick={() => router.push('/calendar')} // ホームボタンのクリックでカレンダーにリダイレクト
-          className="mb-4 flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          <HomeIcon className="h-5 w-5" />
-        </button>
-        <button
-          onClick={handleLogout} // ログアウトボタンを追加
-          className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
+        <div className="mb-4 flex items-center space-x-110">
+          <button
+            onClick={() => router.push('/calendar')} // ホームボタンのクリックでカレンダーにリダイレクト
+            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            <HomeIcon className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleLogout} // ログアウトボタンを追加
+            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          >
+            ログアウト
+          </button>
+        </div>
         {profile && <UserProfileForm profile={profile} />} {/* プロフィール情報が存在する場合、フォームを表示 */}
       </div>
     </>
