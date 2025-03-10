@@ -23,14 +23,17 @@ interface CalendarViewProps {
 
 export default function CalendarView({ events, handleDateClick, handleEventClick }: CalendarViewProps) {
   return (
-    <div className="w-full h-[calc(100vh-200px)] mt-4">
+    <div className="w-full h-[calc(100vh-200px)] mt-0">
       <FullCalendar
         plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
         initialView="dayGridMonth"
         headerToolbar={{
-          left: "prev,next today",
+          left: "",
           center: "title",
-          right: "dayGridMonth,timeGridWeek,timeGridDay",
+          right: ""
+          //toolbarの設定タイトル以外は廃止
+          // 代わりに month/week/day/today の機能は customButtons か
+          // 独自の状態管理を利用して実装する
         }}
         events={events}
         editable={true}
