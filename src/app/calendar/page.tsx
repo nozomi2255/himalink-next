@@ -286,8 +286,6 @@ export default function CalendarPage() {
     }
   };
 
-  const [showSearch, setShowSearch] = useState<boolean>(false); // 検索フォームの表示状態
-
   return (
     <div className="relative min-h-screen p-4 bg-gray-100">
       {/* ヘッダーを絶対配置 */}
@@ -296,7 +294,7 @@ export default function CalendarPage() {
         userAvatarUrl={userAvatarUrl}
         userName={userName}
         showSearch={true}
-        setShowSearch={setShowSearch}
+        setShowSearch={() => {}}
         searchEmail={searchEmail}
         setSearchEmail={setSearchEmail}
         handleSearch={handleSearch}
