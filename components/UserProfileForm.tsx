@@ -23,10 +23,11 @@ export default function UserProfileForm({ profile }: Props) {
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [bio, setBio] = useState(profile.bio || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // アップロードする画像ファイル
+  const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(profile.avatar_url || null);
 
   // プロフィールを更新する関数
   const handleUpdate = async () => {
-    let newAvatarUrl = profile.avatar_url;
+    let newAvatarUrl = localAvatarUrl; // 既存のローカルstateを初期値に
 
     // 画像ファイルが選択されている場合、アップロード処理を行う
     if (avatarFile) {
@@ -49,6 +50,8 @@ export default function UserProfileForm({ profile }: Props) {
         .getPublicUrl(filePath);
 
       newAvatarUrl = publicUrlData.publicUrl; // 新しいアバターURLを設定
+      // localAvatarUrlを更新することで、UserAvatarに反映される
+      setLocalAvatarUrl(newAvatarUrl);
     }
 
     // ユーザー情報を更新
@@ -85,6 +88,7 @@ export default function UserProfileForm({ profile }: Props) {
         reader.onload = (event) => {
           if (event.target) {
             // プレビュー用に画像URLを設定
+            setLocalAvatarUrl(event.target.result as string);
           }
         };
         reader.readAsDataURL(files[0]); // 画像をData URLとして読み込む
@@ -97,10 +101,10 @@ export default function UserProfileForm({ profile }: Props) {
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
         <UserAvatar
-          avatarUrl={profile.avatar_url}
+          avatarUrl={localAvatarUrl} // localAvatarUrlを使用
           username={profile.username}
           onClick={handleAvatarChange} // 画像変更のためのクリックハンドラ
-          size={80} // サイズを指定
+          size={80}
         />
       </div>
       <div>

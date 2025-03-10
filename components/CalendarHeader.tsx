@@ -32,7 +32,7 @@ export default function CalendarHeader({
         avatarUrl={userAvatarUrl}
         username={userName || "?"}
         onClick={() => router.push('/profile')}
-        size={40}
+        size={80}
       />
       <button onClick={() => setShowSearch(!showSearch)} className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400">
         <MagnifyingGlassIcon className="h-5 w-5" />
