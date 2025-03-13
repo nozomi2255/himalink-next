@@ -29,8 +29,8 @@ export default function LoginModal({ onClose }: LoginModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[rgba(0, 0, 0, 0.78)] z-50"> {/* rgbaで透過度を設定 */}
-      <div className="bg-[rgba(79, 179, 179, 0.97)] rounded-lg p-6 max-w-sm w-full"> {/* モーダルの色をrgbaで設定 */}
+    <div className="fixed inset-0 flex items-center justify-center bg-black/30 z-50"> {/* rgbaで透過度を設定 */}
+      <div className="bg-gradient-to-b from-blue-400/90 to-blue-500 rounded-lg p-6 max-w-sm w-full"> {/* ポップな青色のグラデーションを設定 */}
         <h1 className="text-2xl font-bold mb-6 text-white">ひまリンクにログイン</h1>
         {/* メールアドレス入力 */}
         {step === "email" && (
@@ -45,7 +45,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
             />
             <button
               type="submit"
-              className="w-full bg-[#3B8B8B] text-white py-3 rounded-lg" // ボタンの色を変更
+              className="w-full bg-blue-700 text-white py-3 rounded-lg" // ボタンの色をポップな青に変更
             >
               次へ
             </button>
@@ -81,7 +81,7 @@ export default function LoginModal({ onClose }: LoginModalProps) {
             </div>
             <button
               type="submit"
-              className="w-full bg-[#3B8B8B] text-white py-3 rounded-lg mt-4" // ボタンの色を変更
+              className="w-full bg-blue-700 text-white py-3 rounded-lg mt-4" // ボタンの色をポップな青に変更
             >
               ログイン
             </button>
