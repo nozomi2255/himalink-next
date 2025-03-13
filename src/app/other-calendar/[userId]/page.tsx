@@ -3,10 +3,10 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabaseClient";
 import { useParams, useRouter } from "next/navigation";
-import CalendarView from "../../../../components/CalendarView";
+import CalendarView from "../../../components/CalendarView";
 import { HomeIcon } from '@heroicons/react/24/outline';
-import CalendarHeader from "../../../../components/CalendarHeader";
-import UserSearchModal from "../../../../components/UserSearchModal";
+import CalendarHeader from "../../../components/CalendarHeader";
+import UserSearchModal from "../../../components/UserSearchModal";
 
 interface Entry {
   id: string;

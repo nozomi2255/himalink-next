@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from "react";
 import Head from "next/head";
 import { supabase } from "../../lib/supabaseClient";
-import UserProfileForm from "../../../components/UserProfileForm";
+import UserProfileForm from "../../components/UserProfileForm";
 import { useRouter } from "next/navigation";
 import { HomeIcon } from '@heroicons/react/24/outline';
 

@@ -4,12 +4,12 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import CalendarHeader from "../../../components/CalendarHeader";
-import CalendarView from "../../../components/CalendarView";
-import EventFormModal from "../../../components/EventFormModal";
-import FollowingModal from '../../../components/FollowingModal';
-import FollowersModal from '../../../components/FollowersModal';
-import UserSearchModal from '../../../components/UserSearchModal';
+import CalendarHeader from "../../components/CalendarHeader";
+import CalendarView from "../../components/CalendarView";
+import EventFormModal from "../../components/EventFormModal";
+import FollowingModal from '../../components/FollowingModal';
+import FollowersModal from '../../components/FollowersModal';
+import UserSearchModal from '../../components/UserSearchModal';
 
 // Entryインターフェースの定義
 interface Entry {
