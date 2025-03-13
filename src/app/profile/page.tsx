@@ -54,7 +54,7 @@ export default function ProfilePage() {
     if (error) {
       console.error('Logout error:', error); // エラーハンドリング
     } else {
-      router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
+      router.replace('/auth/login'); // ログアウト後に認証画面にリダイレクト
     }
   };
 
