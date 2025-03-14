@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { login } from "./actions";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"; // アイコンをインポート
+import { createClient } from '../../../utils/supabase/client'; // Supabaseクライアントをインポート
 
 // onClose プロパティの型を定義
 interface LoginModalProps {
@@ -14,6 +15,18 @@ export default function LoginModal({ onClose }: LoginModalProps) {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [user, setUser] = useState<any>(null); // ユーザー情報を格納するステート
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // 現在のユーザー情報を取得
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser(data.user);
+      }
+    });
+  }, []);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();

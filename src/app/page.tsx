@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+import { createClient } from '../utils/supabase/client';
+import { redirect, useRouter } from 'next/navigation';
 import CalendarHeader from "../components/CalendarHeader";
 import CalendarView from "../components/CalendarView";
 import EventFormModal from "../components/EventFormModal";
@@ -31,6 +31,14 @@ interface User {
   avatar_url?: string | null;
 }
 
+interface UserProfile {
+  id: string;
+  email: string;
+  username?: string;
+  avatar_url?: string;
+}
+
+
 export default function CalendarPage() {
   const router = useRouter(); // Next.jsのルーターを使用
   const [entries, setEntries] = useState<Entry[]>([]); // カレンダーのエントリーを格納するステート
@@ -46,30 +54,45 @@ export default function CalendarPage() {
   const [selectedEventId, setSelectedEventId] = useState(""); // 選択されたイベントのID
   const [followingUsers, setFollowingUsers] = useState<User[]>([]); // フォロー中のユーザー
   const [followers, setFollowers] = useState<User[]>([]); // フォロワー
+  const [user, setUser] = useState<UserProfile | null>(null);
 
   // モーダルの表示状態
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
   const [showUserSearchModal, setShowUserSearchModal] = useState(false); // ユーザー検索モーダルの表示状態
 
-  // コンポーネントのマウント時にセッションを確認し、エントリーを取得
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) {
-        router.replace('/auth'); // 未ログインの場合、認証画面にリダイレクト
-      } else {
-        setCurrentUserId(data.session.user.id); // 現在のユーザーIDを設定
-        fetchEntries(data.session.user.id); // ユーザーIDでエントリーを取得
-        fetchFollowingUsers(data.session.user.id); // フォロー中のユーザーを取得
-        fetchUserProfile(data.session.user.id); // ユーザーのプロフィールを取得
-        console.log("Current User ID:", data.session.user.id); // デバッグ用
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('ユーザー情報取得エラー:', error);
+      } else if (user) {
+        // ユーザーのメールアドレスをコンソールに表示
+        console.log('ユーザーのメールアドレス:', user.email);
+
+        setUser({
+          id: user.id,
+          email: user.email!,
+          username: user.user_metadata?.username,
+          avatar_url: user.user_metadata?.avatar_url,
+        });
       }
-    });
-  }, [router]);
+
+      setLoading(false);
+    };
+
+    fetchUser();
+  }, []);
+
+  if (loading) {
+    return <p>ユーザー情報を取得中...</p>;
+  }
 
   // ユーザーのプロフィールを取得する関数
   const fetchUserProfile = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from("Users")
       .select("username, avatar_url")
       .eq("id", userId)
@@ -86,7 +109,7 @@ export default function CalendarPage() {
   // ユーザーのエントリーを取得する関数
   const fetchEntries = async (userId: string) => {
     setLoading(true); // ローディング開始
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from('Entries')
       .select('id, user_id, title, content, start_time, end_time, is_all_day')
       .eq('user_id', userId) // ユーザーIDでフィルタリング
@@ -102,7 +125,7 @@ export default function CalendarPage() {
 
   // フォロー中のユーザーを取得する関数
   const fetchFollowingUsers = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from('Follows')
       .select('following_id')
       .eq('follower_id', userId); // フォロワーIDでフィルタリング
@@ -112,7 +135,7 @@ export default function CalendarPage() {
     } else {
       // フォロー中のユーザーの詳細を取得
       const followingUserIds = data.map((follow) => follow.following_id);
-      const { data: usersData, error: usersError } = await supabase
+      const { data: usersData, error: usersError } = await createClient()
         .from('Users')
         .select('id, username, email')
         .in('id', followingUserIds); // フォロー中のユーザーのIDでフィルタリング
@@ -127,7 +150,7 @@ export default function CalendarPage() {
 
   // フォロワーを取得する関数
   const fetchFollowers = async (userId: string) => {
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from('Follows')
       .select('follower_id')
       .eq('following_id', userId); // フォロー中のユーザーIDでフィルタリング
@@ -138,7 +161,7 @@ export default function CalendarPage() {
       // follower_id の配列を抽出
       const followerIds = data.map((follow) => follow.follower_id);
       // Users テーブルから follower の詳細情報を取得
-      const { data: usersData, error: usersError } = await supabase
+      const { data: usersData, error: usersError } = await createClient()
         .from('Users')
         .select('id, username, email')
         .in('id', followerIds);
@@ -161,7 +184,7 @@ export default function CalendarPage() {
 
   // ユーザー検索処理
   const handleSearch = async () => {
-    const { data, error } = await supabase
+    const { data, error } = await createClient()
       .from("Users")
       .select("id, username, email")
       .ilike("email", `%${searchEmail}%`); // メールアドレスで検索
@@ -224,7 +247,7 @@ export default function CalendarPage() {
   const handleUpdateEvent = async () => {
     if (!currentUserId || !selectedEventId) return; // selectedEventIdが必要
 
-    const { error } = await supabase
+    const { error } = await createClient()
       .from("Entries")
       .update({ title: newTitle }) // タイトルを更新
       .eq("id", selectedEventId); // IDでフィルタリング
@@ -242,7 +265,7 @@ export default function CalendarPage() {
   const handleDeleteEvent = async () => {
     if (!selectedEventId) return; // selectedEventIdが必要
 
-    const { error } = await supabase
+    const { error } = await createClient()
       .from("Entries")
       .delete()
       .eq("id", selectedEventId); // IDでフィルタリング
@@ -262,7 +285,7 @@ export default function CalendarPage() {
   const handleAddEvent = async () => {
     if (!currentUserId) return;
 
-    const { error } = await supabase
+    const { error } = await createClient()
       .from("Entries")
       .insert([
         {
