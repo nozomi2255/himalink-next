@@ -3,9 +3,11 @@
 import { useState } from "react";
 import LoginModal from "./LoginModal";
 import Image from "next/image";
+import SignupModal from "./SignupModal";
 
 export default function Page() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSignupOpen, setIsSignupOpen] = useState(false);
 
   return (
     <div className="flex flex-row items-center justify-center min-h-screen bg-gradient-to-b from-[rgba(135,206,250,1)] to-[rgba(0,191,255,1)] text-gray-800 animate-fade-in">
@@ -16,6 +18,7 @@ export default function Page() {
           alt="Himalink Logo" 
           width={800} 
           height={800} 
+          className="drop-shadow-lg transform hover:-translate-y-1 transition-transform duration-300"
         />
       </div>
       {/* 右側: テキストとログインボタン */}
@@ -37,8 +40,16 @@ export default function Page() {
         >
           ログイン
         </button>
+        {/* アカウントを作成リンク */}
+        <button
+          onClick={() => setIsSignupOpen(true)}
+          className="mt-10 text-blue-500 text-xl font-semibold hover:underline"
+        >
+          アカウントを作成
+        </button>
       </div>
       {isOpen && <LoginModal onClose={() => setIsOpen(false)} />}
+      {isSignupOpen && <SignupModal onClose={() => setIsSignupOpen(false)} />}
     </div>
   );
 }

@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { createClient } from '../utils/supabase/client';
-import { redirect, useRouter } from 'next/navigation';
 import CalendarHeader from "../components/CalendarHeader";
 import CalendarView from "../components/CalendarView";
 import EventFormModal from "../components/EventFormModal";
