@@ -7,20 +7,11 @@ import { supabase } from "../../lib/supabaseClient";
 import UserProfileForm from "../../components/UserProfileForm";
 import { useRouter } from "next/navigation";
 import { HomeIcon } from '@heroicons/react/24/outline';
-
-// Profileインターフェースの定義
-interface Profile {
-  id: string;
-  username: string;
-  email: string;
-  full_name?: string;
-  avatar_url?: string | null;
-  bio?: string;
-}
+import type { UserRecord } from "@/app/types";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null); // プロフィール情報を格納するステート
+  const [profile, setProfile] = useState<UserRecord | null>(null); // プロフィール情報を格納するステート
   const [loading, setLoading] = useState(true); // ローディング状態を管理するステート
 
   // コンポーネントのマウント時にプロフィール情報を取得
@@ -36,7 +27,7 @@ export default function ProfilePage() {
           .single(); // ユーザーIDでフィルタリングし、1件取得
 
         if (!error) {
-          setProfile(data); // プロフィール情報をステートに設定
+          setProfile(data as UserRecord); // プロフィール情報をステートに設定
         }
       }
       setLoading(false); // ローディング終了
@@ -54,7 +45,7 @@ export default function ProfilePage() {
     if (error) {
       console.error('Logout error:', error); // エラーハンドリング
     } else {
-      router.replace('/auth/login'); // ログアウト後に認証画面にリダイレクト
+      router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
     }
   };
 
@@ -68,7 +59,7 @@ export default function ProfilePage() {
         <h1 className="text-3xl font-bold mb-4">プロフィール設定</h1>
         <div className="mb-4 flex items-center space-x-110">
           <button
-            onClick={() => router.push('/calendar')} // ホームボタンのクリックでカレンダーにリダイレクト
+            onClick={() => router.push('/')} // ホームボタンのクリックでカレンダーにリダイレクト
             className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
           >
             <HomeIcon className="h-5 w-5" />

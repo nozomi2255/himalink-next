@@ -1,27 +1,57 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-
-// Entryインターフェースの定義
-interface Entry {
-  id: string;
-  title: string;
-  start: string; // ISO 8601 format
-  end?: string; // ISO 8601 format
-  allDay?: boolean; // 終日イベントかどうか
-}
+import { Event } from '../app/types';
+import EventFormModal from "./EventFormModal";
 
 interface CalendarViewProps {
-  events: Entry[]; // eventsの型をEntry[]に変更
-  handleDateClick: (arg: { dateStr: string }) => void;
-  handleEventClick: (arg: { event: { id: string } }) => void;
+  events: Event[]; // eventsの型をEvent[]に変更
 }
 
-export default function CalendarView({ events, handleDateClick, handleEventClick }: CalendarViewProps) {
+export default function CalendarView({ events }: CalendarViewProps) {
+
+  // FullCalendar が期待する形式に変換
+  const calendarEvents = events.map(event => ({
+    id: event.id,
+    title: event.title,
+    start: event.start_time, // FullCalendar expects 'start'
+    end: event.end_time,     // FullCalendar expects 'end'
+    allDay: event.is_all_day,
+  }));
+
+  // EventFormModal の表示状態を管理（初期状態は非表示）
+  const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
+
+  // 日付がクリックされたときの処理
+  const handleDateClick = (arg: { dateStr: string }) => {
+    console.log("クリックされた日付:", arg.dateStr);
+    setSelectedDate(arg.dateStr);
+    setSelectedEventId(""); // 追加の場合はイベントIDは空にする
+    setSelectedEventTitle(""); // 追加の場合はタイトルは空にする
+    setIsEventFormModalOpen(true);
+  };
+
+  // イベントがクリックされたときの処理
+  const handleEventClick = (arg: { event: { id: string, title: string } }) => {
+    console.log("クリックされたイベントID:", arg.event.id);
+    setSelectedEventId(arg.event.id);
+    setSelectedEventTitle(arg.event.title); // クリックされたイベントのタイトルを設定
+    setIsEventFormModalOpen(true);
+  };
+  
+  // モーダルを閉じる処理
+  const handleCloseEventFormModal: () => void = () => {
+    console.log("handleCloseEventFormModal called");
+    setIsEventFormModalOpen(false);
+  };
+
   return (
     <div className="w-full h-[calc(100vh-80px)] mt-0">
       <FullCalendar
@@ -35,13 +65,21 @@ export default function CalendarView({ events, handleDateClick, handleEventClick
           // 代わりに month/week/day/today の機能は customButtons か
           // 独自の状態管理を利用して実装する
         }}
-        events={events}
+        events={calendarEvents}
         editable={true}
         selectable={true}
         dateClick={handleDateClick}
         eventClick={handleEventClick}
         height="100%"
       />
+      {isEventFormModalOpen && (
+        <EventFormModal 
+          selectedDate={selectedDate}
+          selectedEventId={selectedEventId} 
+          selectedEventTitle={selectedEventTitle}
+          onClose={handleCloseEventFormModal}
+        />
+      )}
     </div>
   );
 }

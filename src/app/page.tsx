@@ -1,84 +1,39 @@
 // src/app/page.tsx
-"use client";
-
+import React from 'react';
 import CalendarHeader from "../components/CalendarHeader";
 import CalendarView from "../components/CalendarView";
-import EventFormModal from "../components/EventFormModal";
-import FollowingModal from "../components/FollowingModal";
-import FollowersModal from "../components/FollowersModal";
-import UserSearchModal from "../components/UserSearchModal";
+import { getAuthenticatedUser } from '../app/actions';
+import type { UserRecord, Event } from "../app/types";
+import { getUserEvents } from './eventActions';
 
-export default function CalendarPage() {
+// このページはサーバーコンポーネントとして実行されます
+export default async function CalendarPage() {
+  // サーバー側で認証済みユーザーの詳細情報（fullRecord）を取得する
+  const userRecord = await getAuthenticatedUser();
+  if (!userRecord) {
+    throw new Error("Authenticated user not found.");
+}
+  
+  // 仮にイベントデータを取得する処理が実装されている場合
+  const events: Event[] = await getUserEvents(userRecord.id);
+  
+  const followingUsers: UserRecord[] = []; // 実際のフォロー中ユーザー情報を取得する処理に置き換える
+  const followers: UserRecord[] = []; // 実際のフォロワー情報を取得する処理に置き換える
+
   return (
     <div className="relative min-h-screen p-4 bg-gray-100">
-      {/* ヘッダー */}
-      <div className="absolute top-0 left-0 w-full z-10">
-        <CalendarHeader 
-          // 必要に応じたpropsを渡す
-          userAvatarUrl="/path/to/default-avatar.png" 
-          userName="ユーザー名" 
-          showSearch={true}
-          setShowSearch={() => {}}
-          searchEmail=""
-          setSearchEmail={() => {}}
-          handleSearch={() => {}}
-          onSearchModalOpen={() => {}}
-        />
-      </div>
-
-      {/* ユーザー検索モーダル */}
-      <UserSearchModal
-        searchEmail=""
-        setSearchEmail={() => {}}
-        handleSearch={() => {}}
-        onClose={() => {}}
-        onUserClick={(userId) => {}}
-        searchResults={[]}
+      {/* ヘッダーに認証済みユーザーの詳細情報を渡す */}
+      <CalendarHeader 
+        userAvatarUrl={userRecord.avatar_url || "/path/to/default-avatar.png"} 
+        userName={userRecord.username || "ユーザー名"}  
+        showSearch={true}
+        followingUsers={followingUsers}
+        followers={followers}
       />
-
-      {/* フォロー/フォロワーボタン */}
-      <div className="absolute top-4 right-4 space-x-2">
-        <button className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-          フォロー中
-        </button>
-        <button className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-          フォロワー
-        </button>
-      </div>
 
       {/* カレンダー表示 */}
       <CalendarView 
-        // カレンダー用のイベント情報等のpropsを必要に応じて渡す
-        events={[]}
-        handleDateClick={() => {}}
-        handleEventClick={() => {}}
-      />
-
-      {/* イベントフォーム（追加・編集用） */}
-      <EventFormModal 
-        // 必要なpropsを渡す
-        selectedDate=""
-        newTitle=""
-        setNewTitle={() => {}}
-        setShowForm={() => {}}
-        selectedEventId=""
-        handleUpdateEvent={() => {}}
-        handleDeleteEvent={() => {}}
-        handleAddEvent={() => {}}
-      />
-
-      {/* フォロー中モーダル */}
-      <FollowingModal 
-        followingUsers={[]}
-        onClose={() => {}}
-        onUserClick={(userId) => {}}
-      />
-
-      {/* フォロワーモーダル */}
-      <FollowersModal 
-        followers={[]}
-        onClose={() => {}}
-        onUserClick={(userId) => {}}
+        events={events} 
       />
     </div>
   );

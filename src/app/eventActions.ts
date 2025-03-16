@@ -1,17 +1,6 @@
 // src/app/eventActions.ts
 import { createClient } from '@/utils/supabase/server';
-
-// イベント（予定）の型定義（必要なフィールドに合わせて調整してください）
-export interface Event {
-  id: string;
-  user_id: string;
-  title: string;
-  start_time: string;
-  end_time: string;
-  is_all_day: boolean;
-  content?: string;
-  location?: string;
-}
+import { Event } from './types'; // 新しい型定義をインポート
 
 /**
  * ユーザーの予定（イベント）を取得する関数
@@ -24,6 +13,7 @@ export async function getUserEvents(userId: string): Promise<Event[]> {
     .from('Entries')
     .select('*')
     .eq('user_id', userId);
+
   if (error) throw error;
   return data as Event[];
 }
@@ -60,7 +50,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
  * @param userId - 予定を追加するユーザーのID
  * @param newEvent - 新しいイベントのデータ
  */
-export async function addEvent(userId: string, newEvent: Omit<Event, 'id'>): Promise<void> {
+export async function addEvent(userId: string, newEvent: Omit<Event, 'id' | 'created_at' | 'updated_at'>): Promise<void> {
   const supabase = await createClient();
   const { error } = await supabase
     .from('Entries')

@@ -1,197 +1,46 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
-import { supabase } from "../../../lib/supabaseClient";
-import { useParams, useRouter } from "next/navigation";
-import CalendarView from "../../../components/CalendarView";
-import { HomeIcon } from '@heroicons/react/24/outline';
+// src/app/other-calendar/[userId]/page.tsx
+import React from 'react';
 import CalendarHeader from "../../../components/CalendarHeader";
-import UserSearchModal from "../../../components/UserSearchModal";
+import CalendarView from "../../../components/CalendarView";
+import { getUserRecord } from "../../../app/actions";
+import type { UserRecord, Event } from "../../../app/types";
+import { getUserEvents } from "../../../app/eventActions";
 
-interface Entry {
-  id: string;
-  user_id: string;
-  title: string;
-  content: string;
-  start_time: string;
-  end_time: string;
-  is_all_day: boolean;
+interface OtherCalendarPageProps {
+  params: {
+    userId: string;
+  };
 }
 
-export default function OtherCalendarPage() {
-  const { userId } = useParams();
-  const router = useRouter();
-  const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string | null>(null);
-  const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null);
-  const [isFollowing, setIsFollowing] = useState<boolean>(false);
-  const [showSearchModal, setShowSearchModal] = useState<boolean>(false);
+export default async function OtherCalendarPage({ params }: OtherCalendarPageProps) {
+  // URLパラメータから userId を取得
+  const { userId } = params;
 
-  useEffect(() => {
-    const checkSessionAndFetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.replace("/auth");
-      } else {
-        setCurrentUserId(session.user.id);
-        if (userId) {
-          fetchOtherEntries(Array.isArray(userId) ? userId[0] : userId);
-        }
-        checkFollowStatus(session.user.id, userId as string);
-      }
-    };
-    checkSessionAndFetch();
-  }, [router, userId]);
+  // 渡された userId を元に Users テーブルからユーザーの詳細情報を取得
+  const userRecord: UserRecord | null = await getUserRecord(userId);
+  if (!userRecord) {
+    throw new Error("User record not found.");
+  }
 
-  const fetchOtherEntries = async (userId: string) => {
-    setLoading(true);
+  // 渡された userId を利用してイベント情報を取得
+  const events: Event[] = await getUserEvents(userId);
 
-    // Fetch user information
-    const { data: userData, error: userError } = await supabase
-      .from('Users')
-      .select('username, avatar_url')
-      .eq('id', userId)
-      .maybeSingle();
-
-    if (userError) {
-      console.error('Error fetching user data:', userError);
-    } else {
-      setUserName(userData?.username || null);
-      setUserAvatarUrl(userData?.avatar_url || null);
-    }
-
-    // Fetch entries for the user
-    const { data, error } = await supabase
-      .from('Entries')
-      .select('id, user_id, title, content, start_time, end_time, is_all_day')
-      .eq('user_id', userId)
-      .order('start_time', { ascending: true });
-
-    if (error) {
-      console.error('Error fetching entries:', error);
-    } else {
-      setEntries(data);
-    }
-    setLoading(false);
-  };
-
-  const events = entries.map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-    start: entry.start_time,
-    end: entry.end_time,
-    allDay: entry.is_all_day,
-  }));
-
-  const checkFollowStatus = async (currentUserId: string, targetUserId: string) => {
-    const { data, error } = await supabase
-      .from("Follows")
-      .select("id")
-      .eq("follower_id", currentUserId)
-      .eq("following_id", targetUserId)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error checking follow status:", error);
-    } else {
-      setIsFollowing(!!data); // フォロー中かどうかを設定
-    }
-  };
-
-  const handleFollow = async () => {
-    if (!currentUserId || !userId) return;
-
-    const { error } = await supabase
-      .from("Follows")
-      .insert([{ follower_id: currentUserId, following_id: userId }]); 
-
-    if (error) {
-      console.error("Error following user:", error);
-    } else {
-      setIsFollowing(true); // フォロー状態を更新
-    }
-  };
-
-  const handleUnfollow = async () => {
-    if (!currentUserId || !userId) return;
-
-    const { error } = await supabase
-      .from("Follows")
-      .delete()
-      .eq("follower_id", currentUserId)
-      .eq("following_id", userId);
-
-    if (error) {
-      console.error("Error unfollowing user:", error);
-    } else {
-      setIsFollowing(false); // フォロー状態を更新
-    }
-  };
+  // 実際のフォロー中、フォロワー情報の取得処理に置き換える
+  const followingUsers: UserRecord[] = [];
+  const followers: UserRecord[] = [];
 
   return (
     <div className="relative min-h-screen p-4 bg-gray-100">
-      <div className="absolute top-0 left-0 w-full z-10">
-        <CalendarHeader
-          userAvatarUrl={userAvatarUrl}
-          userName={userName}
-          showSearch={false}
-          setShowSearch={() => {}}
-          searchEmail={""}
-          setSearchEmail={() => {}}
-          handleSearch={() => {}}
-          onAvatarClick={() => {}}  // ここで何も行わないように指定
-          onSearchModalOpen={() => setShowSearchModal(true)}
-        />
-      </div>
-      <div className="relative min-h-screen p-4 bg-gray-100">
-      {/* 右上のボタン群 */}
-      <div className="absolute top-4 right-4 flex flex-row items-end space-x-4 z-10">
-        <button
-          onClick={() => router.push('/calendar')}
-          className="flex items-center bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
-        >
-          <HomeIcon className="h-5 w-5 mr-2" />
-        </button>
-        {isFollowing ? (
-          <button
-            onClick={handleUnfollow}
-            className="bg-red-500 text-white px-0 py-2 rounded hover:bg-red-600"
-          >
-            フォロー解除
-          </button>
-        ) : (
-          <button
-            onClick={handleFollow}
-            className="bg-blue-500 text-white px-0 py-2 rounded hover:bg-blue-600"
-          >
-            フォロー
-          </button>
-        )}
-      </div>
-        {loading ? (
-          <p>Loading entries...</p>
-        ) : (
-            <CalendarView
-              events={events}
-              handleDateClick={() => {}}
-              handleEventClick={() => {}}
-            />
-        )}
-      </div>
-      {showSearchModal && (
-        <UserSearchModal
-          searchEmail={""}
-          setSearchEmail={() => {}}
-          handleSearch={() => {
-            setShowSearchModal(false);
-          }}
-          onClose={() => setShowSearchModal(false)}
-          searchResults={[]}
-          onUserClick={() => {}}
-        />
-      )}
+      {/* ヘッダーに他ユーザーの詳細情報を渡す */}
+      <CalendarHeader 
+        userAvatarUrl={userRecord.avatar_url || "/path/to/default-avatar.png"} 
+        userName={userRecord.username || "ユーザー名"}  
+        showSearch={true}
+        followingUsers={followingUsers}
+        followers={followers}
+      />
+      {/* カレンダー表示 */}
+      <CalendarView events={events} />
     </div>
   );
 }

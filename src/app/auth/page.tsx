@@ -31,7 +31,7 @@ export default function Page() {
           </span>
           <br />
           </div>
-          を持て余す。
+          持て余してない？
         </h1>
         {/* ログインボタン */}
         <button

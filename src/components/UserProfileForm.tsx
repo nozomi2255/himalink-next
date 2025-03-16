@@ -7,11 +7,11 @@ import UserAvatar from "./UserAvatar"; // UserAvatarをインポート
 
 interface UserProfile {
   id: string;
-  username: string;
+  username: string | null;
   email: string;
-  full_name?: string;
+  full_name?: string | null;
   avatar_url?: string | null;
-  bio?: string;
+  bio?: string | null;
 }
 
 interface Props {
@@ -102,7 +102,7 @@ export default function UserProfileForm({ profile }: Props) {
       <div className="flex items-center space-x-4">
         <UserAvatar
           avatarUrl={localAvatarUrl} // localAvatarUrlを使用
-          username={profile.username}
+          username={profile.username || ""}
           onClick={handleAvatarChange} // 画像変更のためのクリックハンドラ
           size={80}
         />
@@ -111,7 +111,7 @@ export default function UserProfileForm({ profile }: Props) {
         <label className="block font-bold">ユーザー名</label>
         <input
           type="text"
-          value={username}
+          value={username || ""}
           onChange={(e) => setUsername(e.target.value)}
           className="border p-2 w-full"
         />

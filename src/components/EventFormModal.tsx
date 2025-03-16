@@ -1,33 +1,59 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 
 interface EventFormModalProps {
   selectedDate: string;
-  newTitle: string;
-  setNewTitle: (title: string) => void;
-  setShowForm: (show: boolean) => void;
   selectedEventId: string;
-  handleUpdateEvent: () => void;
-  handleDeleteEvent: () => void;
-  handleAddEvent: () => void;
+  selectedEventTitle?: string; // 編集モード時にイベントのタイトルを渡す
+  onClose: () => void;
 }
 
 export default function EventFormModal({
   selectedDate,
-  newTitle,
-  setNewTitle,
-  setShowForm,
   selectedEventId,
-  handleUpdateEvent,
-  handleDeleteEvent,
-  handleAddEvent,
+  selectedEventTitle,
+  onClose,
 }: EventFormModalProps) {
+
+  // 内部状態でイベントタイトルを管理
+  const [newTitle, setNewTitle] = useState(selectedEventTitle || "");
+
+  // モーダルを閉じる内部処理（例としてログ出力）
+  const handleCancel = () => {
+    console.log("Modal closed.");
+    // ここでモーダルの表示状態を管理する処理を追加する
+    onClose();
+  };
+
+  // イベント追加処理の内部定義
+  const handleAdd = () => {
+    console.log(`Add event on ${selectedDate} with title: ${newTitle}`);
+    // ここで API 呼び出しなどの追加処理を実装する
+    onClose();
+  };
+
+  // イベント更新処理の内部定義
+  const handleUpdate = () => {
+    console.log(`Update event ${selectedEventId} with new title: ${newTitle}`);
+    // ここで API 呼び出しなどの更新処理を実装する
+    onClose();
+  };
+
+  // イベント削除処理の内部定義
+  const handleDelete = () => {
+    console.log(`Delete event ${selectedEventId}`);
+    // ここで API 呼び出しなどの削除処理を実装する
+    onClose();
+  };
+
   return (
     <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-white bg-opacity-50 z-50">
       <div className="bg-white p-6 rounded shadow-lg">
         <h2 className="text-xl mb-4">
-          {selectedEventId ? `Edit Event on ${selectedDate}` : `Add Event on ${selectedDate}`}
+          {selectedEventId 
+            ? `Edit Event on ${selectedEventTitle || "No Title"}` 
+            : `Add Event on ${selectedDate}`}
         </h2>
         <input
           type="text"
@@ -38,7 +64,7 @@ export default function EventFormModal({
         />
         <div className="flex justify-end">
           <button
-            onClick={() => setShowForm(false)}
+            onClick={handleCancel}
             className="mr-2 bg-gray-500 text-white px-4 py-2 rounded"
           >
             Cancel
@@ -46,13 +72,13 @@ export default function EventFormModal({
           {selectedEventId ? (
             <>
               <button
-                onClick={handleUpdateEvent}
+                onClick={handleUpdate}
                 className="bg-blue-500 text-white px-4 py-2 rounded mr-2"
               >
                 Update
               </button>
               <button
-                onClick={handleDeleteEvent}
+                onClick={handleDelete}
                 className="bg-red-500 text-white px-4 py-2 rounded"
               >
                 Delete
@@ -60,7 +86,7 @@ export default function EventFormModal({
             </>
           ) : (
             <button
-              onClick={handleAddEvent}
+              onClick={handleAdd}
               className="bg-blue-500 text-white px-4 py-2 rounded"
             >
               Save
