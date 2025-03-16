@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, HomeIcon } from '@heroicons/react/24/outline';
 import UserAvatar from "./UserAvatar";
 import UserSearchModal from "./UserSearchModal";
 import type { UserRecord } from "../app/types";
@@ -13,6 +13,7 @@ interface CalendarHeaderProps {
   showSearch: boolean;
   followingUsers: UserRecord[];
   followers: UserRecord[];
+  isProfilePage?: boolean; // プロフィール画面かどうかを判定するオプション
 }
 
 export default function CalendarHeader({
@@ -21,12 +22,18 @@ export default function CalendarHeader({
   showSearch,
   followingUsers,
   followers,
+  isProfilePage = false, // デフォルトは false（ホームカレンダー画面）
 }: CalendarHeaderProps) {
 
   const router = useRouter();
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isFollowingModalOpen, setIsFollowingModalOpen] = useState(false);
   const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
+
+  // プロフィール画面の場合はホームボタンとして表示する
+  const handleHomeButtonClick = () => {
+    router.push('/');
+  };
 
   // アバターがクリックされたときの処理（プロフィール画面へ遷移）
   const handleAvatarClick = () => {
@@ -66,36 +73,48 @@ export default function CalendarHeader({
   
   return (
     <>
-    <div className="absolute top-4 left-4 flex items-center space-x-4">
-      <UserAvatar
-        avatarUrl={userAvatarUrl}
-        username={userName || "?"}
-        onClick={handleAvatarClick}
-        size={60}
-      />
-
-      {showSearch && (
-              <div className="mt-2">
-                <button 
-                  onClick={handleSearchButtonClick}
-                  className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400"
-                >
-                  <MagnifyingGlassIcon className="h-5 w-5" />
-                </button>
-              </div>
-      )}
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between px-4">
+        {/* 左側: isProfilePage が true の場合はホームボタン、false ならユーザーアバター */}
+        <div className="flex items-center">
+          {isProfilePage ? (
+            <button 
+              onClick={handleHomeButtonClick}
+              className="flex items-center focus:outline-none"
+            >
+              <HomeIcon className="h-6 w-6" />
+            </button>
+          ) : (
+            <UserAvatar
+              avatarUrl={userAvatarUrl}
+              username={userName || "?"}
+              onClick={handleAvatarClick}
+              size={60}
+            />
+          )}
+      </div>
+      {/* 右側: 検索ボタンとフォロー中／フォロワーボタン */}
+      <div className="flex items-center space-x-2">
+        {showSearch && (
+                <div className="mt-2">
+                  <button 
+                    onClick={handleSearchButtonClick}
+                    className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400"
+                  >
+                    <MagnifyingGlassIcon className="h-5 w-5" />
+                  </button>
+                </div>
+        )}
 
       {/* フォロー中/フォロワーボタンを CalendarHeader 内に追加 */}
-      <div className="ml-4 flex space-x-2">
           <button 
             onClick={handleFollowingButtonClick}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 z-50"
           >
             フォロー中 ({followingUsers.length})
           </button>
           <button 
             onClick={handleFollowersButtonClick}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 z-50"
           >
             フォロワー ({followers.length})
           </button>

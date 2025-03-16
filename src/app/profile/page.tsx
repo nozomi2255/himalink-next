@@ -1,77 +1,36 @@
 // app/profile/page.tsx
-"use client";
-
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Head from "next/head";
-import { supabase } from "../../lib/supabaseClient";
+import { getAuthenticatedUser } from "../../app/actions";
 import UserProfileForm from "../../components/UserProfileForm";
-import { useRouter } from "next/navigation";
-import { HomeIcon } from '@heroicons/react/24/outline';
+import CalendarHeader from "../../components/CalendarHeader";
 import type { UserRecord } from "@/app/types";
 
-export default function ProfilePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<UserRecord | null>(null); // プロフィール情報を格納するステート
-  const [loading, setLoading] = useState(true); // ローディング状態を管理するステート
-
-  // コンポーネントのマウント時にプロフィール情報を取得
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const { data: { session } } = await supabase.auth.getSession(); // セッションを取得
-      if (session) {
-        // セッションが存在する場合、ユーザーのプロフィール情報を取得
-        const { data, error } = await supabase
-          .from("Users")
-          .select("id, username, email, full_name, avatar_url, bio")
-          .eq("id", session.user.id)
-          .single(); // ユーザーIDでフィルタリングし、1件取得
-
-        if (!error) {
-          setProfile(data as UserRecord); // プロフィール情報をステートに設定
-        }
-      }
-      setLoading(false); // ローディング終了
-    };
-
-    fetchProfile(); // プロフィール情報を取得する関数を呼び出す
-  }, []);
-
-  // ローディング中はメッセージを表示
-  if (loading) return <p>Loading...</p>;
-
-  // ログアウト処理
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Logout error:', error); // エラーハンドリング
-    } else {
-      router.replace('/auth'); // ログアウト後に認証画面にリダイレクト
-    }
-  };
+export default async function ProfilePage() {
+  // サーバー側で認証済みユーザーの詳細情報を取得する
+  const profile: UserRecord | null = await getAuthenticatedUser();
+  if (!profile) {
+    throw new Error("Authenticated user not found.");
+  }
 
   return (
     <>
+      <CalendarHeader 
+          userAvatarUrl={profile.avatar_url || "/path/to/default-avatar.png"}
+          userName={profile.username || "ユーザー名"}
+          showSearch={true}
+          followingUsers={[]}
+          followers={[]}
+          isProfilePage={true}
+      />
       <Head>
         <title>プロフィール設定 - ひまリンク</title>
         <meta name="description" content="ひまリンクのプロフィール設定画面" />
       </Head>
       <div className="max-w-2xl mx-auto p-8 relative">
         <h1 className="text-3xl font-bold mb-4">プロフィール設定</h1>
-        <div className="mb-4 flex items-center space-x-110">
-          <button
-            onClick={() => router.push('/')} // ホームボタンのクリックでカレンダーにリダイレクト
-            className="flex items-center bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-          >
-            <HomeIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={handleLogout} // ログアウトボタンを追加
-            className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-          >
-            ログアウト
-          </button>
-        </div>
-        {profile && <UserProfileForm profile={profile} />} {/* プロフィール情報が存在する場合、フォームを表示 */}
+        {/* 取得済みのユーザー情報（UserRecord 型）を UserProfileForm に渡す */}
+        <UserProfileForm profile={profile} />
       </div>
     </>
   );

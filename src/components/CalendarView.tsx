@@ -60,7 +60,7 @@ export default function CalendarView({ events }: CalendarViewProps) {
         headerToolbar={{
           left: "",
           center: "title",
-          right: ""
+          right: "",
           //toolbarの設定タイトル以外は廃止
           // 代わりに month/week/day/today の機能は customButtons か
           // 独自の状態管理を利用して実装する
@@ -72,6 +72,7 @@ export default function CalendarView({ events }: CalendarViewProps) {
         eventClick={handleEventClick}
         height="100%"
       />
+      <div className="z-50">
       {isEventFormModalOpen && (
         <EventFormModal 
           selectedDate={selectedDate}
@@ -80,6 +81,7 @@ export default function CalendarView({ events }: CalendarViewProps) {
           onClose={handleCloseEventFormModal}
         />
       )}
+      </div>
     </div>
   );
 }
