@@ -23,7 +23,7 @@ export default async function CalendarPage() {
 
   return (
     <div className="relative min-h-screen p-4 bg-gray-100">
-      <div className="relative z-50 mb-6">
+      <div className="relative z-50">
       {/* ヘッダーに認証済みユーザーの詳細情報を渡す */}
       <CalendarHeader 
         userAvatarUrl={userRecord.avatar_url || "/path/to/default-avatar.png"} 

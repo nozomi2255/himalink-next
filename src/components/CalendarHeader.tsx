@@ -73,15 +73,15 @@ export default function CalendarHeader({
   
   return (
     <>
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between px-4">
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between">
         {/* 左側: isProfilePage が true の場合はホームボタン、false ならユーザーアバター */}
         <div className="flex items-center">
           {isProfilePage ? (
             <button 
               onClick={handleHomeButtonClick}
-              className="flex items-center focus:outline-none"
+              className="flex items-center justify-center w-12 h-12 rounded-full bg-blue-500 hover:bg-blue-600 transition duration-200"
             >
-              <HomeIcon className="h-6 w-6" />
+              <HomeIcon className="h-6 w-6 text-white" />
             </button>
           ) : (
             <UserAvatar

@@ -53,7 +53,17 @@ body {
   animation: fade-in 0.8s ease-out;
 }
 
+.fc-toolbar h2.fc-toolbar-title {
+  display: inline;
+}
+
 .fc-toolbar-chunk {
-  display: inline-flex !important;
+  display: flex !important;
   align-items: center;
+}
+
+.fc .fc-header-toolbar {
+  position: relative;
+  z-index: 100 !important;  /* 他の要素より高い値に設定 */
+  pointer-events: auto;      /* クリックイベントを受け取る */
 }
