@@ -88,35 +88,35 @@ export default function CalendarHeader({
               avatarUrl={userAvatarUrl}
               username={userName || "?"}
               onClick={handleAvatarClick}
-              size={60}
+              size={50}
             />
           )}
       </div>
       {/* 右側: 検索ボタンとフォロー中／フォロワーボタン */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-1">
         {showSearch && (
                 <div className="mt-2">
                   <button 
                     onClick={handleSearchButtonClick}
                     className="flex items-center bg-gray-300 text-black px-2 py-2 rounded hover:bg-gray-400"
                   >
-                    <MagnifyingGlassIcon className="h-5 w-5" />
+                    <MagnifyingGlassIcon className="h-4 w-4" />
                   </button>
                 </div>
         )}
 
       {/* フォロー中/フォロワーボタンを CalendarHeader 内に追加 */}
           <button 
-            onClick={handleFollowingButtonClick}
-            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 z-50"
-          >
-            フォロー中 ({followingUsers.length})
-          </button>
-          <button 
             onClick={handleFollowersButtonClick}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 z-50"
+            className="bg-blue-500 text-white px-1 py-1 rounded hover:bg-blue-600 z-50"
           >
             フォロワー ({followers.length})
+          </button>
+          <button 
+            onClick={handleFollowingButtonClick}
+            className="bg-green-500 text-white px-1 py-1 rounded hover:bg-green-600 z-50"
+          >
+            フォロー中 ({followingUsers.length})
           </button>
         </div>
     </div>

@@ -1,0 +1,51 @@
+.calendar-container {
+    width: 100%;
+    max-width: 800px;
+    margin: auto;
+    font-family: Arial, sans-serif;
+  }
+  
+  .calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+  }
+  
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+  }
+  
+  .calendar-header-grid {
+    background-color: #f3f3f3;
+    font-weight: bold;
+  }
+  
+  .calendar-day-header {
+    padding: 10px;
+    text-align: center;
+    background-color: #ddd;
+  }
+  
+  .calendar-day {
+    padding: 20px;
+    text-align: center;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    position: relative;
+  }
+  
+  .other-month {
+    opacity: 0.5;
+    background-color: #f9f9f9;
+  }
+
+  .event-container {
+    position: relative;
+    z-index: 10;
+  }
+  .event {
+    cursor: pointer; /* クリック可能なカーソル */
+  }

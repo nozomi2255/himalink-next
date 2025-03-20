@@ -22,8 +22,8 @@ export default async function CalendarPage() {
   const followers: UserRecord[] = await getFollowers(userRecord.id); // 実際のフォロワー情報を取得する処理に置き換える
 
   return (
-    <div className="relative min-h-screen p-4 bg-gray-100">
-      <div className="relative z-50">
+    <div className="relative min-h-screen p-4 bg-blue-50">
+      <div className="sticky top-0 left-0 right-0 z-50">
       {/* ヘッダーに認証済みユーザーの詳細情報を渡す */}
       <CalendarHeader 
         userAvatarUrl={userRecord.avatar_url || "/path/to/default-avatar.png"} 
@@ -34,7 +34,7 @@ export default async function CalendarPage() {
       />
       </div>
       {/* カレンダー表示 */}
-      <div className="pt-4">
+      <div className="mt-13">
       <CalendarView 
         events={events} 
       />

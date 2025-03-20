@@ -1,10 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
+import Calendar from "./Calendar";
 import { Event } from '../app/types';
 import EventFormModal from "./EventFormModal";
 
@@ -14,15 +11,6 @@ interface CalendarViewProps {
 
 export default function CalendarView({ events }: CalendarViewProps) {
 
-  // FullCalendar が期待する形式に変換
-  const calendarEvents = events.map(event => ({
-    id: event.id,
-    title: event.title,
-    start: event.start_time, // FullCalendar expects 'start'
-    end: event.end_time,     // FullCalendar expects 'end'
-    allDay: event.is_all_day,
-  }));
-
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -31,7 +19,6 @@ export default function CalendarView({ events }: CalendarViewProps) {
 
   // 日付がクリックされたときの処理
   const handleDateClick = (arg: { dateStr: string }) => {
-    console.log("クリックされた日付:", arg.dateStr);
     setSelectedDate(arg.dateStr);
     setSelectedEventId(""); // 追加の場合はイベントIDは空にする
     setSelectedEventTitle(""); // 追加の場合はタイトルは空にする
@@ -40,7 +27,6 @@ export default function CalendarView({ events }: CalendarViewProps) {
 
   // イベントがクリックされたときの処理
   const handleEventClick = (arg: { event: { id: string, title: string } }) => {
-    console.log("クリックされたイベントID:", arg.event.id);
     setSelectedEventId(arg.event.id);
     setSelectedEventTitle(arg.event.title); // クリックされたイベントのタイトルを設定
     setIsEventFormModalOpen(true);
@@ -54,23 +40,12 @@ export default function CalendarView({ events }: CalendarViewProps) {
 
   return (
     <div className="w-full h-[calc(100vh-80px)] mt-0">
-      <FullCalendar
-        plugins={[timeGridPlugin, interactionPlugin, dayGridPlugin]}
-        initialView="dayGridMonth"
-        headerToolbar={{
-          start: "",
-          center: "prev title next",
-          end: "",
-          //toolbarの設定タイトル以外は廃止
-          // 代わりに month/week/day/today の機能は customButtons か
-          // 独自の状態管理を利用して実装する
-        }}
-        events={calendarEvents}
-        editable={true}
-        selectable={true}
-        dateClick={handleDateClick}
+      <Calendar 
+        events={events} 
+        editable={true} 
+        selectable={true} 
+        dateClick={handleDateClick} 
         eventClick={handleEventClick}
-        height="100%"
       />
       {isEventFormModalOpen && (
         <EventFormModal 
