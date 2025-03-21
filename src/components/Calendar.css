@@ -72,3 +72,12 @@
     color: white;
     padding: 5px;
 }
+
+/* 日付数字を左上に固定表示 */
+.day-number {
+  position: absolute;
+  top: 4px;   /* 任意のマージン */
+  left: 4px;  /* 任意のマージン */
+  font-weight: bold;
+  /* 他にフォントサイズや色なども自由に指定 */
+}

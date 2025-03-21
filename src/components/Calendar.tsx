@@ -48,7 +48,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       <div className="calendar-grid">
         {days.map((day, index) => (
           <div key={index} className={`calendar-day ${format(day, "MM") !== format(monthStart, "MM") ? "other-month" : ""}`} onClick={() => dateClick && dateClick({ dateStr: format(day, "yyyy-MM-dd") })}>
-            {format(day, "d")}
+            <div className="day-number">{format(day, "d")}</div>
             <div className="event-container">
               {events.filter(event => format(event.start_time, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).map(event => (
                 <div key={event.id} className="event" onClick={(e) => {
