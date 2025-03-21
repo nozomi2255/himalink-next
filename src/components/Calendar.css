@@ -1,51 +1,74 @@
 .calendar-container {
-    width: 100%;
-    max-width: 800px;
+    width: 100vw; /* 画面の横幅いっぱいにする */
+    height: 100vh; /* 画面の高さいっぱいにする */
     margin: auto;
     font-family: Arial, sans-serif;
-  }
+}
   
-  .calendar-header {
+.calendar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px;
-  }
+}
   
-  .calendar-grid {
+.calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 2px;
-  }
+    gap: 0px;
+}
   
-  .calendar-header-grid {
+.calendar-header-grid {
     background-color: #f3f3f3;
     font-weight: bold;
-  }
+}
   
-  .calendar-day-header {
+.calendar-day-header {
     padding: 10px;
     text-align: center;
     background-color: #ddd;
-  }
+}
   
-  .calendar-day {
+.calendar-day {
     padding: 20px;
     text-align: center;
     background-color: #fff;
     border: 1px solid #ccc;
     position: relative;
-  }
+    height: 120px; /* 1日セルの高さを増やす */
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* 4つ角のマスだけを丸くする */
+.calendar-day-header:first-child {
+  border-top-left-radius: 50px !important;
+}
+.calendar-day-header:last-child {
+  border-top-right-radius: 50px !important;
+}
+.calendar-day:nth-last-child(7) {
+  border-bottom-left-radius: 50px !important;
+}
+.calendar-day:last-child {
+  border-bottom-right-radius: 50px !important;
+}
   
-  .other-month {
+.other-month {
     opacity: 0.5;
     background-color: #f9f9f9;
-  }
+}
 
-  .event-container {
+.event-container {
     position: relative;
     z-index: 10;
-  }
-  .event {
+    border-radius: 10px !important;
+}
+.event {
     cursor: pointer; /* クリック可能なカーソル */
-  }
+    border-radius: 8px !important;
+    background-color: #2196f3;
+    color: white;
+    padding: 5px;
+}

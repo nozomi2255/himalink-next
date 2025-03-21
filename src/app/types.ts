@@ -7,8 +7,8 @@ export interface Event {
     entry_type: string;   // 予定のタイプ
     title: string;        // タイトル
     content?: string;     // 内容（オプション）
-    start_time?: string;  // 開始時間（オプション）
-    end_time?: string;    // 終了時間（オプション）
+    start_time: string;  // 開始時間（オプション）
+    end_time: string;    // 終了時間（オプション）
     is_all_day: boolean;  // 終日イベントかどうか
     location?: string;    // 場所（オプション）
     created_at: string;   // 作成日時

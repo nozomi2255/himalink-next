@@ -1,15 +1,27 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Calendar from "./Calendar";
 import { Event } from '../app/types';
 import EventFormModal from "./EventFormModal";
 
-interface CalendarViewProps {
-  events: Event[]; // eventsの型をEvent[]に変更
-}
+export default function CalendarView() {
+  const [events, setEvents] = useState<Event[]>([]);
 
-export default function CalendarView({ events }: CalendarViewProps) {
+  // イベント一覧を取得する関数（fetchを使う）
+  const fetchEvents = async () => {
+    const res = await fetch(`/api/event`, { cache: "no-store" });
+    if (res.ok) {
+      const data: Event[] = await res.json();
+      setEvents(data);
+    } else {
+      console.error("Failed to fetch events");
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);
@@ -35,11 +47,12 @@ export default function CalendarView({ events }: CalendarViewProps) {
   // モーダルを閉じる処理
   const handleCloseEventFormModal: () => void = () => {
     console.log("handleCloseEventFormModal called");
+    fetchEvents(); // モーダルを閉じる際に最新のイベントを取得
     setIsEventFormModalOpen(false);
   };
 
   return (
-    <div className="w-full h-[calc(100vh-80px)] mt-0">
+    <div className="w-full h-screen flex justify-center items-center">
       <Calendar 
         events={events} 
         editable={true} 

@@ -3,8 +3,7 @@ import React from 'react';
 import CalendarHeader from "../components/CalendarHeader";
 import CalendarView from "../components/CalendarView";
 import { getAuthenticatedUser } from '../app/actions';
-import type { UserRecord, Event } from "../app/types";
-import { getUserEvents } from './eventActions';
+import type { UserRecord } from "../app/types";
 import { getFollowingUsers, getFollowers } from '../app/followActions';
 
 // このページはサーバーコンポーネントとして実行されます
@@ -13,10 +12,7 @@ export default async function CalendarPage() {
   const userRecord = await getAuthenticatedUser();
   if (!userRecord) {
     throw new Error("Authenticated user not found.");
-}
-  
-  // 仮にイベントデータを取得する処理が実装されている場合
-  const events: Event[] = await getUserEvents(userRecord.id);
+  }
   
   const followingUsers: UserRecord[] = await getFollowingUsers(userRecord.id); // 実際のフォロー中ユーザー情報を取得する処理に置き換える
   const followers: UserRecord[] = await getFollowers(userRecord.id); // 実際のフォロワー情報を取得する処理に置き換える
@@ -35,9 +31,7 @@ export default async function CalendarPage() {
       </div>
       {/* カレンダー表示 */}
       <div className="mt-13">
-      <CalendarView 
-        events={events} 
-      />
+      <CalendarView/>
       </div>
     </div>
   );

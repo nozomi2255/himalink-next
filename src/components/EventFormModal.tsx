@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Event } from "../app/types";
 
 interface EventFormModalProps {
   selectedDate: string;
@@ -22,28 +23,62 @@ export default function EventFormModal({
   // モーダルを閉じる内部処理（例としてログ出力）
   const handleCancel = () => {
     console.log("Modal closed.");
-    // ここでモーダルの表示状態を管理する処理を追加する
     onClose();
   };
 
   // イベント追加処理の内部定義
-  const handleAdd = () => {
-    console.log(`Add event on ${selectedDate} with title: ${newTitle}`);
-    // ここで API 呼び出しなどの追加処理を実装する
+  const handleAdd = async () => {
+    try {
+      const response = await fetch("/api/event", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: newTitle,
+          start_time: selectedDate,
+          end_time: selectedDate,
+          is_all_day: true,
+          entry_type: "event",
+        }),
+      });
+      if (!response.ok) throw new Error("Failed to add event");
+      console.log(`Event added on ${selectedDate} with title: ${newTitle}`);
+    } catch (error) {
+      console.error("Error adding event:", error);
+    }
     onClose();
   };
 
   // イベント更新処理の内部定義
-  const handleUpdate = () => {
-    console.log(`Update event ${selectedEventId} with new title: ${newTitle}`);
-    // ここで API 呼び出しなどの更新処理を実装する
+  const handleUpdate = async () => {
+    try {
+      const response = await fetch(`/api/event?eventId=${selectedEventId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!response.ok) throw new Error("Failed to update event");
+      console.log(`Event ${selectedEventId} updated with new title: ${newTitle}`);
+    } catch (error) {
+      console.error("Error updating event:", error);
+    }
     onClose();
   };
 
   // イベント削除処理の内部定義
-  const handleDelete = () => {
-    console.log(`Delete event ${selectedEventId}`);
-    // ここで API 呼び出しなどの削除処理を実装する
+  const handleDelete = async () => {
+    try {
+      const response = await fetch(`/api/event?eventId=${selectedEventId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to delete event");
+      console.log(`Event ${selectedEventId} deleted`);
+    } catch (error) {
+      console.error("Error deleting event:", error);
+    }
     onClose();
   };
 

@@ -50,7 +50,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           <div key={index} className={`calendar-day ${format(day, "MM") !== format(monthStart, "MM") ? "other-month" : ""}`} onClick={() => dateClick && dateClick({ dateStr: format(day, "yyyy-MM-dd") })}>
             {format(day, "d")}
             <div className="event-container">
-              {events.filter(event => format(event.created_at, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).map(event => (
+              {events.filter(event => format(event.start_time, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).map(event => (
                 <div key={event.id} className="event" onClick={(e) => {
                   e.stopPropagation(); // Prevents date click from triggering
                   console.log("イベントクリック:", event.id);
