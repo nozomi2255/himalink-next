@@ -1,7 +1,9 @@
 .calendar-container {
     width: 100vw; /* 画面の横幅いっぱいにする */
     height: 100vh; /* 画面の高さいっぱいにする */
-    margin: auto;
+    margin: 0;
+    box-sizing: border-box;
+    overflow: auto;      /* 内容が画面を超えた場合はスクロール可能 */
     font-family: Arial, sans-serif;
 }
   
@@ -30,7 +32,8 @@
 }
   
 .calendar-day {
-    padding: 20px;
+    box-sizing: border-box;
+    padding: 25px 0 0 0;
     text-align: center;
     background-color: #fff;
     border: 1px solid #ccc;
@@ -38,7 +41,7 @@
     height: 120px; /* 1日セルの高さを増やす */
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    align-items: flex-start; /* 必要に応じて変更 */
 }
 
 /* 4つ角のマスだけを丸くする */
@@ -61,7 +64,10 @@
 }
 
 .event-container {
-    position: relative;
+    width: 100% !important;
+    height: auto; /* 高さを自動に設定 */
+    box-sizing: border-box;
+    position: absolute;
     z-index: 10;
     border-radius: 10px !important;
 }
@@ -70,7 +76,6 @@
     border-radius: 8px !important;
     background-color: #2196f3;
     color: white;
-    padding: 5px;
 }
 
 /* 日付数字を左上に固定表示 */

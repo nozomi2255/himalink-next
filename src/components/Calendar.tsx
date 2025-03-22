@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, format, subMonths, addMonths } from "date-fns";
 import "./Calendar.css";
