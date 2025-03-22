@@ -90,3 +90,21 @@
 .calendar-day.drag-selected {
   background-color: rgba(33, 150, 243, 0.2);
 }
+
+.event.default-event {
+  background-color: rgba(33, 150, 243, 0.2);
+  padding: 0px;
+  border-radius: 8px;
+  font-style: italic;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 追加されたボックスシャドウ */
+  animation: fadeIn 0.3s; /* フェードインアニメーション */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

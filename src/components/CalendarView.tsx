@@ -72,6 +72,7 @@ export default function CalendarView() {
         dateClick={handleDateClick} 
         eventClick={handleEventClick}
         dragDateChange={handleDragDateChange}
+        modalOpen={isEventFormModalOpen}
       />
       {isEventFormModalOpen && selectedRange && (
         <EventFormModal 

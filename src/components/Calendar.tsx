@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter 
 } from "date-fns";
@@ -14,12 +14,20 @@ interface CalendarProps {
   dateClick?: (arg: { dateStr: string }) => void;
   eventClick?: (arg: { event: { id: string; title: string } }) => void;
   dragDateChange?: (arg: { startDate: string; endDate: string }) => void;
+  modalOpen?: boolean;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange }) => {
+const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
+  const [clickedDate, setClickedDate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!modalOpen) {
+      setClickedDate(null);
+    }
+  }, [modalOpen]);
 
   // 月の開始・終了・週の開始・終了を取得
   const monthStart = startOfMonth(currentDate);
@@ -94,27 +102,41 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
               onMouseDown={() => handleMouseDown(day)}
               onMouseEnter={() => handleMouseEnter(day)}
               onMouseUp={handleMouseUp}
-              onClick={() => dateClick && dateClick({ dateStr })}
+              onClick={() => {
+                setClickedDate(dateStr);
+                dateClick && dateClick({ dateStr });
+              }}
             >
               <div className="day-number">{format(day, "d")}</div>
               <div className="event-container">
-              {events.filter(event => {
-                const eventStart = startOfDay(new Date(event.start_time));
-                const eventEnd = startOfDay(new Date(event.end_time));
-                const cellDay = startOfDay(day);
-                // セルの日付がイベントの開始日以上かつ終了日以下なら表示する
-                return cellDay >= eventStart && cellDay <= eventEnd;
-              }).map(event => (
-                <div key={event.id} className="event" onClick={(e) => {
-                  e.stopPropagation();
-                  console.log("イベントクリック:", event.id);
-                  if (eventClick) {
-                    eventClick({ event: { id: event.id, title: event.title } });
-                  }
-                }}>
-                  {event.title}
-                </div>
-              ))}
+                {events
+                  .filter(event => {
+                    const eventStart = startOfDay(new Date(event.start_time));
+                    const eventEnd = startOfDay(new Date(event.end_time));
+                    const cellDay = startOfDay(day);
+                    return cellDay >= eventStart && cellDay <= eventEnd;
+                  })
+                  .map(event => (
+                    <div
+                      key={event.id}
+                      className="event"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        console.log("イベントクリック:", event.id);
+                        if (eventClick) {
+                          eventClick({ event: { id: event.id, title: event.title } });
+                        }
+                      }}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+                {/* クリックされた日付に対して、デフォルトのイベントコンテナを追加 */}
+                {clickedDate === dateStr && (
+                  <div className="event default-event">
+                    New Event
+                  </div>
+                )}
               </div>
             </div>
           );
