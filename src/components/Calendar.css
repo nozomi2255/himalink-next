@@ -86,3 +86,7 @@
   font-weight: bold;
   /* 他にフォントサイズや色なども自由に指定 */
 }
+
+.calendar-day.drag-selected {
+  background-color: rgba(33, 150, 243, 0.2);
+}

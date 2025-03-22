@@ -4,14 +4,16 @@ import React, { useState } from "react";
 import { Event } from "../app/types";
 
 interface EventFormModalProps {
-  selectedDate: string;
+  selectedStartDate: string;
+  selectedEndDate: string;
   selectedEventId: string;
-  selectedEventTitle?: string; // 編集モード時にイベントのタイトルを渡す
+  selectedEventTitle?: string;
   onClose: () => void;
 }
 
 export default function EventFormModal({
-  selectedDate,
+  selectedStartDate,
+  selectedEndDate,
   selectedEventId,
   selectedEventTitle,
   onClose,
@@ -36,14 +38,14 @@ export default function EventFormModal({
         },
         body: JSON.stringify({
           title: newTitle,
-          start_time: selectedDate,
-          end_time: selectedDate,
+          start_time: selectedStartDate, // 連日イベントの開始日
+          end_time: selectedEndDate,     // 連日イベントの終了日
           is_all_day: true,
           entry_type: "event",
         }),
       });
       if (!response.ok) throw new Error("Failed to add event");
-      console.log(`Event added on ${selectedDate} with title: ${newTitle}`);
+      console.log(`Event added from ${selectedStartDate} to ${selectedEndDate} with title: ${newTitle}`);
     } catch (error) {
       console.error("Error adding event:", error);
     }
@@ -88,7 +90,7 @@ export default function EventFormModal({
         <h2 className="text-xl mb-4">
           {selectedEventId 
             ? `Edit Event on ${selectedEventTitle || "No Title"}` 
-            : `Add Event on ${selectedDate}`}
+            : `Add Event from ${selectedStartDate} to ${selectedEndDate}`}
         </h2>
         <input
           type="text"

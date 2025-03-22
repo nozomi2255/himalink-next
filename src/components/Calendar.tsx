@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, format, subMonths, addMonths } from "date-fns";
+import { 
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter 
+} from "date-fns";
 import "./Calendar.css";
 import { Event } from "../app/types";
 
@@ -11,10 +13,13 @@ interface CalendarProps {
   selectable?: boolean;
   dateClick?: (arg: { dateStr: string }) => void;
   eventClick?: (arg: { event: { id: string; title: string } }) => void;
+  dragDateChange?: (arg: { startDate: string; endDate: string }) => void;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick }) => {
+const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [dragStart, setDragStart] = useState<string | null>(null);
+  const [dragEnd, setDragEnd] = useState<string | null>(null);
 
   // 月の開始・終了・週の開始・終了を取得
   const monthStart = startOfMonth(currentDate);
@@ -29,6 +34,38 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     days.push(day);
     day = addDays(day, 1);
   }
+
+  // ドラッグ中に選択されているセルか判定する関数
+  const isDragSelected = (day: Date) => {
+    if (dragStart && dragEnd) {
+      const start = new Date(dragStart);
+      const end = new Date(dragEnd);
+      return !isBefore(day, start) && !isAfter(day, end);
+    }
+    return false;
+  };
+
+  // マウスイベントハンドラー
+  const handleMouseDown = (day: Date) => {
+    const dateStr = format(day, "yyyy-MM-dd");
+    setDragStart(dateStr);
+    setDragEnd(dateStr);
+  };
+
+  const handleMouseEnter = (day: Date) => {
+    if (dragStart) {
+      setDragEnd(format(day, "yyyy-MM-dd"));
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (dragStart && dragEnd && dragDateChange) {
+      dragDateChange({ startDate: dragStart, endDate: dragEnd });
+    }
+    // 状態をリセットする場合（モーダルを開くなどの別処理と組み合わせても良い）
+    setDragStart(null);
+    setDragEnd(null);
+  };
 
   return (
     <div className="calendar-container">
@@ -48,13 +85,28 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
       {/* 日付セル */}
       <div className="calendar-grid">
-        {days.map((day, index) => (
-          <div key={index} className={`calendar-day ${format(day, "MM") !== format(monthStart, "MM") ? "other-month" : ""}`} onClick={() => dateClick && dateClick({ dateStr: format(day, "yyyy-MM-dd") })}>
-            <div className="day-number">{format(day, "d")}</div>
-            <div className="event-container">
-              {events.filter(event => format(event.start_time, "yyyy-MM-dd") === format(day, "yyyy-MM-dd")).map(event => (
+        {days.map((day, index) => {
+          const dateStr = format(day, "yyyy-MM-dd");
+          return (
+            <div
+              key={index}
+              className={`calendar-day ${format(day, "MM") !== format(monthStart, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
+              onMouseDown={() => handleMouseDown(day)}
+              onMouseEnter={() => handleMouseEnter(day)}
+              onMouseUp={handleMouseUp}
+              onClick={() => dateClick && dateClick({ dateStr })}
+            >
+              <div className="day-number">{format(day, "d")}</div>
+              <div className="event-container">
+              {events.filter(event => {
+                const eventStart = startOfDay(new Date(event.start_time));
+                const eventEnd = startOfDay(new Date(event.end_time));
+                const cellDay = startOfDay(day);
+                // セルの日付がイベントの開始日以上かつ終了日以下なら表示する
+                return cellDay >= eventStart && cellDay <= eventEnd;
+              }).map(event => (
                 <div key={event.id} className="event" onClick={(e) => {
-                  e.stopPropagation(); // Prevents date click from triggering
+                  e.stopPropagation();
                   console.log("イベントクリック:", event.id);
                   if (eventClick) {
                     eventClick({ event: { id: event.id, title: event.title } });
@@ -63,9 +115,10 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
                   {event.title}
                 </div>
               ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

@@ -28,6 +28,7 @@ export default function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
+  const [selectedRange, setSelectedRange] = useState<{ startDate: string; endDate: string } | null>(null);
 
   // 日付がクリックされたときの処理
   const handleDateClick = (arg: { dateStr: string }) => {
@@ -51,6 +52,17 @@ export default function CalendarView() {
     setIsEventFormModalOpen(false);
   };
 
+  const handleDragDateChange = ({ startDate, endDate }: { startDate: string; endDate: string }) => {
+    setSelectedRange({ startDate, endDate });
+    setIsEventFormModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isEventFormModalOpen) {
+      fetchEvents(); // モーダルが閉じられたときにイベントを再フェッチ
+    }
+  }, [isEventFormModalOpen]);
+
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <Calendar 
@@ -59,10 +71,12 @@ export default function CalendarView() {
         selectable={true} 
         dateClick={handleDateClick} 
         eventClick={handleEventClick}
+        dragDateChange={handleDragDateChange}
       />
-      {isEventFormModalOpen && (
+      {isEventFormModalOpen && selectedRange && (
         <EventFormModal 
-          selectedDate={selectedDate}
+          selectedStartDate={selectedRange.startDate}
+          selectedEndDate={selectedRange.endDate}
           selectedEventId={selectedEventId} 
           selectedEventTitle={selectedEventTitle}
           onClose={handleCloseEventFormModal}
