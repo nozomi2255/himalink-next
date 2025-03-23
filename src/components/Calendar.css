@@ -1,10 +1,17 @@
 .calendar-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-y: hidden;
+    height: 100vh;
+    scroll-snap-type: y mandatory;
     width: 100vw; /* 画面の横幅いっぱいにする */
-    height: 100vh; /* 画面の高さいっぱいにする */
     margin: 0;
     box-sizing: border-box;
     overflow: auto;      /* 内容が画面を超えた場合はスクロール可能 */
     font-family: Arial, sans-serif;
+    position: relative;
+    overflow: hidden; /* コンテナのオーバーフローを隠す */
 }
   
 .calendar-header {
@@ -122,4 +129,30 @@
 
 .event-form-modal {
   animation: cutIn 0.3s ease-out;
+}
+
+.calendar-month {
+    width: 100%;
+    scroll-snap-align: start;
+    margin-bottom: 20px;
+    animation: slideFade 1s ease-in-out;
+    display: none; /* 初期状態で非表示にする */
+    opacity: 0;
+    transition: opacity 4s ease-in-out;
+}
+
+.calendar-month.active {
+  display: block; /* アクティブな月のみ表示する */
+  opacity: 1;
+}
+
+@keyframes slideFade {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
