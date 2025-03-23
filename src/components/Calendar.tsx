@@ -15,9 +15,11 @@ interface CalendarProps {
   eventClick?: (arg: { event: { id: string; title: string } }) => void;
   dragDateChange?: (arg: { startDate: string; endDate: string }) => void;
   modalOpen?: boolean;
+  modalPosition: { top: number; left: number };
+  setModalPosition: React.Dispatch<React.SetStateAction<{ top: number; left: number }>>;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen }) => {
+const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
@@ -75,6 +77,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     setDragEnd(null);
   };
 
+  const handleDateClick = (event: React.MouseEvent, dateStr: string) => {
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    const newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
+    console.log("Modal Position:", newPosition);
+    setModalPosition(newPosition);
+    setClickedDate(dateStr);
+    dateClick && dateClick({ dateStr });
+  };
+
   return (
     <div className="calendar-container">
       {/* ナビゲーション */}
@@ -102,10 +113,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
               onMouseDown={() => handleMouseDown(day)}
               onMouseEnter={() => handleMouseEnter(day)}
               onMouseUp={handleMouseUp}
-              onClick={() => {
-                setClickedDate(dateStr);
-                dateClick && dateClick({ dateStr });
-              }}
+              onClick={(event) => handleDateClick(event, dateStr)}
             >
               <div className="day-number">{format(day, "d")}</div>
               <div className="event-container">

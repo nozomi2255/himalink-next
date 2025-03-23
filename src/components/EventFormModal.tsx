@@ -9,6 +9,7 @@ interface EventFormModalProps {
   selectedEventId: string;
   selectedEventTitle?: string;
   onClose: () => void;
+  modalPosition: { top: number; left: number };
 }
 
 export default function EventFormModal({
@@ -17,6 +18,7 @@ export default function EventFormModal({
   selectedEventId,
   selectedEventTitle,
   onClose,
+  modalPosition,
 }: EventFormModalProps) {
 
   // 内部状態でイベントタイトルを管理
@@ -85,7 +87,10 @@ export default function EventFormModal({
   };
 
   return (
-    <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-11/12 max-w-md bg-white bg-opacity-50 z-50">
+    <div
+      className="absolute transform w-11/12 max-w-md bg-white bg-opacity-50 z-50"
+      style={{ top: modalPosition.top, left: modalPosition.left }}
+    >
       <div className="bg-white p-6 rounded shadow-lg">
         <h2 className="text-xl mb-4">
           {selectedEventId 

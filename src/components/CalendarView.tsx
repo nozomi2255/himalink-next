@@ -29,6 +29,7 @@ export default function CalendarView() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
   const [selectedRange, setSelectedRange] = useState<{ startDate: string; endDate: string } | null>(null);
+  const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
   // 日付がクリックされたときの処理
   const handleDateClick = (arg: { dateStr: string }) => {
@@ -69,17 +70,29 @@ export default function CalendarView() {
         events={events} 
         editable={true} 
         selectable={true} 
-        dateClick={handleDateClick} 
-        eventClick={handleEventClick}
+        dateClick={(arg) => {
+          setSelectedDate(arg.dateStr);
+          setSelectedEventId("");
+          setSelectedEventTitle("");
+          setIsEventFormModalOpen(true);
+        }}
+        eventClick={(arg) => {
+          setSelectedEventId(arg.event.id);
+          setSelectedEventTitle(arg.event.title);
+          setIsEventFormModalOpen(true);
+        }}
         dragDateChange={handleDragDateChange}
         modalOpen={isEventFormModalOpen}
+        modalPosition={modalPosition}
+        setModalPosition={setModalPosition}
       />
-      {isEventFormModalOpen && selectedRange && (
-        <EventFormModal 
-          selectedStartDate={selectedRange.startDate}
-          selectedEndDate={selectedRange.endDate}
-          selectedEventId={selectedEventId} 
+      {isEventFormModalOpen && (
+        <EventFormModal
+          selectedStartDate={selectedRange?.startDate || ""}
+          selectedEndDate={selectedRange?.endDate || ""}
+          selectedEventId={selectedEventId}
           selectedEventTitle={selectedEventTitle}
+          modalPosition={modalPosition}
           onClose={handleCloseEventFormModal}
         />
       )}
