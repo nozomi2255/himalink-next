@@ -78,7 +78,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   };
 
   const handleDateClick = (event: React.MouseEvent, dateStr: string) => {
-    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
     console.log("Modal Position:", newPosition);
     setModalPosition(newPosition);

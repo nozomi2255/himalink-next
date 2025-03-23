@@ -88,8 +88,13 @@ export default function EventFormModal({
 
   return (
     <div
+      className="fixed inset-0 z-40 bg-transparent"
+      onClick={onClose}
+    >
+    <div
       className="absolute transform w-11/12 max-w-md bg-white bg-opacity-50 z-50 event-form-modal"
       style={{ top: modalPosition.top, left: modalPosition.left }}
+      onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-white p-6 rounded shadow-lg">
         <h2 className="text-xl mb-4">
@@ -136,6 +141,7 @@ export default function EventFormModal({
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 }
