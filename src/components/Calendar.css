@@ -2,13 +2,11 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    overflow-y: hidden;
-    height: 100vh;
-    scroll-snap-type: y mandatory;
-    width: 100vw; /* 画面の横幅いっぱいにする */
+    height: 100vh; /* ヘッダーの高さを引いた分をカレンダーの高さに設定 */
+    width: 100vw;
     margin: 0;
     box-sizing: border-box;
-    overflow: auto;      /* 内容が画面を超えた場合はスクロール可能 */
+    overflow: hidden;      /* 内容が画面を超えた場合はスクロール可能 */
     font-family: Arial, sans-serif;
     position: relative;
     overflow: hidden; /* コンテナのオーバーフローを隠す */
@@ -19,11 +17,13 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px;
+    height: 50px; /* ヘッダーの高さを固定 */
 }
   
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
+    grid-auto-rows: 1fr; /* 各行の高さを均等にする */
     gap: 0px;
 }
   
@@ -155,4 +155,12 @@
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+.calendar-view-container {
+    height: calc(100vh - 50px); /* ヘッダーの高さを引いた分をカレンダーの高さに設定 */
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }

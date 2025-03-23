@@ -30,7 +30,7 @@ export default async function CalendarPage() {
       />
       </div>
       {/* カレンダー表示 */}
-      <div className="mt-13">
+      <div className="mt-13 h-[calc(100vh-90px)] overflow-hidden">
       <CalendarView/>
       </div>
     </div>
