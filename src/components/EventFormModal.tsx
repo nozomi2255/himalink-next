@@ -88,7 +88,7 @@ export default function EventFormModal({
 
   return (
     <div
-      className="absolute transform w-11/12 max-w-md bg-white bg-opacity-50 z-50"
+      className="absolute transform w-11/12 max-w-md bg-white bg-opacity-50 z-50 event-form-modal"
       style={{ top: modalPosition.top, left: modalPosition.left }}
     >
       <div className="bg-white p-6 rounded shadow-lg">
