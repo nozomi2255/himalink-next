@@ -31,6 +31,30 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     }
   }, [modalOpen]);
 
+  useEffect(() => {
+    const container = document.querySelector(".calendar-container") as HTMLElement;
+    if (!container) return;
+
+    let lastScrollTime = 0;
+    const SCROLL_DELAY = 500; // milliseconds
+
+    const handleWheel = (e: WheelEvent) => {
+      const now = Date.now();
+      if (now - lastScrollTime < SCROLL_DELAY) return;
+
+      if (e.deltaY > 30) {
+        setCurrentDate(prev => addMonths(prev, 1));
+        lastScrollTime = now;
+      } else if (e.deltaY < -30) {
+        setCurrentDate(prev => subMonths(prev, 1));
+        lastScrollTime = now;
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: true });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   // 月の開始・終了・週の開始・終了を取得
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
