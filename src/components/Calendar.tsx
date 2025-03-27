@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { 
-  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter
 } from "date-fns";
 import "./Calendar.css";
 import { Event } from "../app/types";
@@ -20,75 +20,65 @@ interface CalendarProps {
 }
 
 const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
-  // 現在の日付を管理する状態
   const [currentDate, setCurrentDate] = useState(new Date());
-  // ドラッグ開始日と終了日を管理する状態
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
-  // クリックされた日付を管理する状態
   const [clickedDate, setClickedDate] = useState<string | null>(null);
-  // 前月と次月の日付を管理する状態
   const [previousMonth, setPreviousMonth] = useState(subMonths(currentDate, 1));
   const [nextMonth, setNextMonth] = useState(addMonths(currentDate, 1));
-  // アクティブな月を管理する状態
   const [activeMonth, setActiveMonth] = useState<'previous' | 'current' | 'next'>('current');
+  const [transitioning, setTransitioning] = useState(false);
+  const [transitionDirection, setTransitionDirection] = useState<'next' | 'previous' | null>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
+  const [scrollOffset, setScrollOffset] = useState(0);
 
-  // モーダルが閉じられたときにクリックされた日付をリセット
   useEffect(() => {
     if (!modalOpen) {
       setClickedDate(null);
     }
   }, [modalOpen]);
 
-  // スクロールイベントで月を切り替える
   useEffect(() => {
-    const container = document.querySelector(".calendar-container") as HTMLElement;
+    const container = calendarRef.current;
     if (!container) return;
 
-    let lastScrollTime = 0;
-    const SCROLL_DELAY = 500; // スクロールの遅延時間（ミリ秒）
+    let accumulatedScroll = 0;
+    const SCROLL_THRESHOLD = 100; // 月変更の閾値
 
     const handleWheel = (e: WheelEvent) => {
-      const now = Date.now();
-      if (now - lastScrollTime < SCROLL_DELAY) return;
+      e.preventDefault(); // ブラウザのデフォルトスクロールを防ぐ
+      accumulatedScroll += e.deltaY;
+      setScrollOffset(accumulatedScroll);
 
-      if (e.deltaY > 30) {
+      if (accumulatedScroll > SCROLL_THRESHOLD) {
         handleMonthChange('next');
-        lastScrollTime = now;
-      } else if (e.deltaY < -30) {
+        accumulatedScroll = 0;
+        setScrollOffset(0);
+      } else if (accumulatedScroll < -SCROLL_THRESHOLD) {
         handleMonthChange('previous');
-        lastScrollTime = now;
+        accumulatedScroll = 0;
+        setScrollOffset(0);
       }
     };
 
-    container.addEventListener("wheel", handleWheel, { passive: true });
+    container.addEventListener("wheel", handleWheel, { passive: false });
     return () => container.removeEventListener("wheel", handleWheel);
-  }, []);
+  }, [nextMonth, previousMonth]);
 
-  // 月を切り替える関数
   const handleMonthChange = (direction: 'next' | 'previous') => {
-    if (direction === 'next') {
-      setActiveMonth('next');
-      setTimeout(() => {
-        setCurrentDate(nextMonth);
-        setActiveMonth('current');
-      }, 1000); // アニメーションの時間に合わせる
-    } else {
-      setActiveMonth('previous');
-      setTimeout(() => {
-        setCurrentDate(previousMonth);
-        setActiveMonth('current');
-      }, 1000);
-    }
+    setActiveMonth(direction);
+    setTimeout(() => {
+      setCurrentDate(direction === 'next' ? nextMonth : previousMonth);
+      setScrollOffset(0);
+      setActiveMonth('current');
+    }, 300); // CSSトランジション時間に合わせる
   };
 
-  // 現在の日付が変更されたときに前月と次月を更新
   useEffect(() => {
     setPreviousMonth(subMonths(currentDate, 1));
     setNextMonth(addMonths(currentDate, 1));
   }, [currentDate]);
 
-  // アクティブな月をDOMに反映
   useEffect(() => {
     const months = document.querySelectorAll('.calendar-month');
     months.forEach((month, index) => {
@@ -100,13 +90,11 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     });
   }, [activeMonth]);
 
-  // 月の開始・終了・週の開始・終了を取得
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
-  const endDate = addDays(startDate, 41); // 6週間分の日付を表示
+  const endDate = addDays(startDate, 41);
 
-  // 日付データを作成
   const days: Date[] = [];
   let day = startDate;
   while (day <= endDate) {
@@ -114,7 +102,6 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     day = addDays(day, 1);
   }
 
-  // ドラッグ中に選択されているセルか判定する関数
   const isDragSelected = (day: Date) => {
     if (dragStart && dragEnd) {
       const start = new Date(dragStart);
@@ -124,7 +111,6 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     return false;
   };
 
-  // マウスイベントハンドラー
   const handleMouseDown = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
     setDragStart(dateStr);
@@ -141,7 +127,6 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     if (dragStart && dragEnd && dragDateChange) {
       dragDateChange({ startDate: dragStart, endDate: dragEnd });
     }
-    // 状態をリセットする場合（モーダルを開くなどの別処理と組み合わせても良い）
     setDragStart(null);
     setDragEnd(null);
   };
@@ -156,9 +141,11 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   };
 
   return (
-    <div className="calendar-container">
-      {/* 前月 */}
-      <div className="calendar-month">
+    <div className="calendar-container" ref={calendarRef}>
+      <div
+        className="calendar-month previous-month"
+        style={{ transform: `translateY(calc(-100% + ${scrollOffset}px))` }}
+      >
         <h2>{format(previousMonth, "MMMM yyyy")}</h2>
         <div className="calendar-grid">
           {days.map((day, index) => {
@@ -208,17 +195,17 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
         </div>
       </div>
 
-      {/* 現在の月 */}
-      <div className="calendar-month">
+      <div
+        className="calendar-month current-month"
+        style={{ transform: `translateY(${scrollOffset}px)` }}
+      >
         <h2>{format(currentDate, "MMMM yyyy")}</h2>
-        {/* カレンダーのヘッダー（曜日） */}
         <div className="calendar-grid calendar-header-grid">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
             <div key={day} className="calendar-day-header">{day}</div>
           ))}
         </div>
 
-        {/* 日付セル */}
         <div className="calendar-grid">
           {days.map((day, index) => {
             const dateStr = format(day, "yyyy-MM-dd");
@@ -255,7 +242,6 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
                         {event.title}
                       </div>
                     ))}
-                  {/* クリックされた日付に対して、デフォルトのイベントコンテナを追加 */}
                   {clickedDate === dateStr && (
                     <div className="event default-event">
                       New Event
@@ -268,8 +254,10 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
         </div>
       </div>
 
-      {/* 次月 */}
-      <div className="calendar-month">
+      <div
+        className="calendar-month next-month"
+        style={{ transform: `translateY(calc(100% + ${scrollOffset}px))` }}
+      >
         <h2>{format(nextMonth, "MMMM yyyy")}</h2>
         <div className="calendar-grid">
           {days.map((day, index) => {
