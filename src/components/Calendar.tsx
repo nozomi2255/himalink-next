@@ -71,6 +71,33 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     return () => container.removeEventListener("scroll", handleScroll);
   }, [monthList]);
 
+  useEffect(() => {
+    const container = calendarRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const calendarMonths = Array.from(container.querySelectorAll(".calendar-month")) as HTMLDivElement[];
+      const containerTop = container.getBoundingClientRect().top;
+
+      let closestIndex = 0;
+      let minDistance = Infinity;
+
+      calendarMonths.forEach((monthEl, index) => {
+        const rect = monthEl.getBoundingClientRect();
+        const distance = Math.abs(rect.top - containerTop);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      setActiveMonthIndex(closestIndex);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [monthList]);
+
   const monthStart = startOfMonth(monthList[activeMonthIndex]);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
@@ -127,6 +154,9 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   return (
     <div className="calendar-container" ref={calendarRef}>
+      <div className="calendar-header-sticky">
+        <h2>{format(monthList[activeMonthIndex], "MMMM yyyy")}</h2>
+      </div>
       <div className="calendar-months-wrapper">
         {monthList.map((month, index) => {
           const monthStart = startOfMonth(month);
