@@ -21,6 +21,12 @@
     padding: 10px;
     height: 50px; /* ヘッダーの高さを固定 */
 }
+
+/* アニメーション開始・終了用のクラス */
+.calendar-header-sticky.animating {
+  opacity: 0;
+  transform: translateY(-10px);
+}
   
 .calendar-grid {
     display: grid;
@@ -30,7 +36,6 @@
     width: 100%; /* ✅ これを追加 */
     max-width: 100%;
     box-sizing: border-box; /* ✅ 念のため */
-    border: 2px dashed blue;
 }
   
 .calendar-header-grid {
@@ -57,23 +62,9 @@
     align-items: flex-start; /* 必要に応じて変更 */
 }
 
-/* 4つ角のマスだけを丸くする */
-.calendar-day-header:first-child {
-  border-top-left-radius: 50px !important;
-}
-.calendar-day-header:last-child {
-  border-top-right-radius: 50px !important;
-}
-.calendar-day:nth-last-child(7) {
-  border-bottom-left-radius: 50px !important;
-}
-.calendar-day:last-child {
-  border-bottom-right-radius: 50px !important;
-}
-  
-.other-month {
-    opacity: 0.5;
-    background-color: #f9f9f9;
+.calendar-day.other-month .day-number {
+  opacity: 0.3; /* 好みで 0.2 〜 0.5 に調整可能 */
+  color: #999;  /* 必要であれば文字色も調整可能 */
 }
 
 .event-container {
@@ -169,3 +160,4 @@
   font-size: 1.5rem;
   font-weight: bold;
 }
+
