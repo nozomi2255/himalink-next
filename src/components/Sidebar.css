@@ -1,0 +1,63 @@
+.sidebar {
+    width: 180px;
+    background-color: #f8faff;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid #ddd;
+    height: 100vh;
+  }
+  
+  .avatar {
+    width: 60px;
+    height: 60px;
+    background-color: #cce5ff;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 24px;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+  }
+  
+  .nav-section {
+    margin-bottom: 30px;
+    width: 100%;
+  }
+  
+  .nav-button {
+    display: block;
+    width: 100%;
+    padding: 8px;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: center;
+  }
+  
+  .template-section {
+    width: 100%;
+  }
+  
+  .template-section h4 {
+    font-size: 14px;
+    margin-bottom: 10px;
+    color: #555;
+  }
+  
+  .template-button {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 8px;
+    background-color: #e0f7ff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }

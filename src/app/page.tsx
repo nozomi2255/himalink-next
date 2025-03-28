@@ -1,6 +1,7 @@
 // src/app/page.tsx
 import React from 'react';
 import CalendarHeader from "../components/CalendarHeader";
+import Sidebar from "../components/Sidebar";
 import CalendarView from "../components/CalendarView";
 import { getAuthenticatedUser } from '../app/actions';
 import type { UserRecord } from "../app/types";
@@ -30,8 +31,11 @@ export default async function CalendarPage() {
       />
       </div>
       {/* カレンダー表示 */}
-      <div className="mt-13 h-[calc(100vh-90px)] overflow-hidden">
-      <CalendarView/>
+      <div className="mt-0 h-[calc(100vhpx)] flex">
+        <Sidebar />
+        <div className="flex-1 overflow-hidden">
+          <CalendarView />
+        </div>
       </div>
     </div>
   );
