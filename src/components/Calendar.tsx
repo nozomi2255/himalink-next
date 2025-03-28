@@ -45,6 +45,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
+  const [scrollDirection, setScrollDirection] = useState<"up" | "down">("down");
   const initialMonthList = Array.from({ length: 13 }, (_, i) =>
     addMonths(currentDate, i - 6)
   );
@@ -119,13 +120,21 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       });
 
       if (closestDate && !isSameMonth(closestDate, currentDate)) {
+        let direction: "up" | "down" = "down";
+        if (
+          closestDate !== null &&
+          closestDate < currentDate.getTime()
+        ) {
+          direction = "up";
+        }
+        setScrollDirection(direction);
         setAnimatingHeader(true);
         setTimeout(() => {
           if (closestDate !== null) {
             setCurrentDate(closestDate);
           }
           setAnimatingHeader(false);
-        }, 200);
+        }, 300);
       }
     };
 
@@ -177,7 +186,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   return (
     <div className="calendar-container" ref={calendarRef}>
-      <div className={`calendar-header-sticky ${animatingHeader ? "animating" : ""}`}>
+      <div className={`calendar-header-sticky ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
         <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
       </div>
       <div className="calendar-grid">

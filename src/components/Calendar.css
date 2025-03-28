@@ -153,11 +153,22 @@
   padding: 10px;
   border-bottom: 1px solid #ccc;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .calendar-header-sticky h2 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: bold;
+}
+
+.calendar-header-sticky.animating.up {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.calendar-header-sticky.animating.down {
+  opacity: 0;
+  transform: translateY(20px);
 }
 
