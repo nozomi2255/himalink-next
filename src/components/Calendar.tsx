@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import {
-  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth
 } from "date-fns";
 import "./Calendar.css";
 import { Event } from "../app/types";
@@ -38,15 +38,52 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     }
   }, [modalOpen]);
 
+  useEffect(() => {
+    const container = calendarRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const scrollThreshold = 300;
+      const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < scrollThreshold;
+
+      if (nearBottom) {
+        const lastMonth = monthList[monthList.length - 1];
+        const nextMonth = addMonths(lastMonth, 1);
+        if (!monthList.some(m => format(m, "yyyy-MM") === format(nextMonth, "yyyy-MM"))) {
+          setMonthList(prev => [...prev, nextMonth]);
+        }
+      }
+
+      const nearTop = container.scrollTop < scrollThreshold;
+
+      if (nearTop) {
+        const firstMonth = monthList[0];
+        const prevMonth = subMonths(firstMonth, 1);
+        if (!monthList.some(m => format(m, "yyyy-MM") === format(prevMonth, "yyyy-MM"))) {
+          setMonthList(prev => [prevMonth, ...prev]);
+          // Maintain scroll position to prevent jump
+          container.scrollTop += container.scrollHeight;
+        }
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [monthList]);
+
   const monthStart = startOfMonth(monthList[activeMonthIndex]);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
   const endDate = addDays(startDate, 41);
 
-  const days: Date[] = [];
+  const days: (Date | null)[] = [];
   let day = startDate;
   while (day <= endDate) {
-    days.push(day);
+    if (isSameMonth(day, monthList[activeMonthIndex])) {
+      days.push(day); // 同じ月なら表示
+    } else {
+      days.push(null); // 異なる月は null → 空セル表示に使える
+    }
     day = addDays(day, 1);
   }
 
@@ -95,11 +132,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           const monthStart = startOfMonth(month);
           const startDate = startOfWeek(monthStart);
           const endDate = addDays(startDate, 41);
-          const days: Date[] = [];
+          const days: (Date | null)[] = [];
 
           let day = startDate;
           while (day <= endDate) {
-            days.push(day);
+            if (isSameMonth(day, month)) {
+              days.push(day);
+            } else {
+              days.push(null);
+            }
             day = addDays(day, 1);
           }
 
@@ -110,16 +151,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
             >
               <h2>{format(month, "MMMM yyyy")}</h2>
               <div className="calendar-grid">
-                {days.map((day, dayIndex) => {
-                  const dateStr = format(day, "yyyy-MM-dd");
-                  return (
+                {days.map((day, dayIndex) =>
+                  day ? (
                     <div
                       key={dayIndex}
                       className={`calendar-day ${format(day, "MM") !== format(month, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
                       onMouseDown={() => handleMouseDown(day)}
                       onMouseEnter={() => handleMouseEnter(day)}
                       onMouseUp={handleMouseUp}
-                      onClick={(event) => handleDateClick(event, dateStr)}
+                      onClick={(event) => handleDateClick(event, format(day, "yyyy-MM-dd"))}
                     >
                       <div className="day-number">{format(day, "d")}</div>
                       <div className="event-container">
@@ -144,15 +184,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
                               {event.title}
                             </div>
                           ))}
-                        {clickedDate === dateStr && (
-                          <div className="event default-event">
-                            New Event
-                          </div>
+                        {clickedDate === format(day, "yyyy-MM-dd") && (
+                          <div className="event default-event">New Event</div>
                         )}
                       </div>
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div key={dayIndex} className="calendar-day empty" />
+                  )
+                )}
               </div>
             </div>
           );
