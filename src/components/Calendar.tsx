@@ -24,13 +24,13 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
-  const [previousMonth, setPreviousMonth] = useState(subMonths(currentDate, 1));
-  const [nextMonth, setNextMonth] = useState(addMonths(currentDate, 1));
-  const [activeMonth, setActiveMonth] = useState<'previous' | 'current' | 'next'>('current');
+  const initialMonthList = Array.from({ length: 13 }, (_, i) =>
+    addMonths(currentDate, i - 6)
+  );
+  const [monthList, setMonthList] = useState<Date[]>(initialMonthList);
+  const [activeMonthIndex, setActiveMonthIndex] = useState(6);
   const [transitioning, setTransitioning] = useState(false);
-  const [transitionDirection, setTransitionDirection] = useState<'next' | 'previous' | null>(null);
   const calendarRef = useRef<HTMLDivElement>(null);
-  const [scrollOffset, setScrollOffset] = useState(0);
 
   useEffect(() => {
     if (!modalOpen) {
@@ -38,59 +38,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     }
   }, [modalOpen]);
 
-  useEffect(() => {
-    const container = calendarRef.current;
-    if (!container) return;
-
-    let accumulatedScroll = 0;
-    const SCROLL_THRESHOLD = 100; // 月変更の閾値
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault(); // ブラウザのデフォルトスクロールを防ぐ
-      accumulatedScroll += e.deltaY;
-      setScrollOffset(accumulatedScroll);
-
-      if (accumulatedScroll > SCROLL_THRESHOLD) {
-        handleMonthChange('next');
-        accumulatedScroll = 0;
-        setScrollOffset(0);
-      } else if (accumulatedScroll < -SCROLL_THRESHOLD) {
-        handleMonthChange('previous');
-        accumulatedScroll = 0;
-        setScrollOffset(0);
-      }
-    };
-
-    container.addEventListener("wheel", handleWheel, { passive: false });
-    return () => container.removeEventListener("wheel", handleWheel);
-  }, [nextMonth, previousMonth]);
-
-  const handleMonthChange = (direction: 'next' | 'previous') => {
-    setActiveMonth(direction);
-    setTimeout(() => {
-      setCurrentDate(direction === 'next' ? nextMonth : previousMonth);
-      setScrollOffset(0);
-      setActiveMonth('current');
-    }, 300); // CSSトランジション時間に合わせる
-  };
-
-  useEffect(() => {
-    setPreviousMonth(subMonths(currentDate, 1));
-    setNextMonth(addMonths(currentDate, 1));
-  }, [currentDate]);
-
-  useEffect(() => {
-    const months = document.querySelectorAll('.calendar-month');
-    months.forEach((month, index) => {
-      if (index === 1) {
-        month.classList.add('active');
-      } else {
-        month.classList.remove('active');
-      }
-    });
-  }, [activeMonth]);
-
-  const monthStart = startOfMonth(currentDate);
+  const monthStart = startOfMonth(monthList[activeMonthIndex]);
   const monthEnd = endOfMonth(monthStart);
   const startDate = startOfWeek(monthStart);
   const endDate = addDays(startDate, 41);
@@ -142,169 +90,73 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   return (
     <div className="calendar-container" ref={calendarRef}>
-      <div
-        className="calendar-month previous-month"
-        style={{ transform: `translateY(calc(-100% + ${scrollOffset}px))` }}
-      >
-        <h2>{format(previousMonth, "MMMM yyyy")}</h2>
-        <div className="calendar-grid">
-          {days.map((day, index) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            return (
-              <div
-                key={index}
-                className={`calendar-day ${format(day, "MM") !== format(previousMonth, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
-                onMouseDown={() => handleMouseDown(day)}
-                onMouseEnter={() => handleMouseEnter(day)}
-                onMouseUp={handleMouseUp}
-                onClick={(event) => handleDateClick(event, dateStr)}
-              >
-                <div className="day-number">{format(day, "d")}</div>
-                <div className="event-container">
-                  {events
-                    .filter(event => {
-                      const eventStart = startOfDay(new Date(event.start_time));
-                      const eventEnd = startOfDay(new Date(event.end_time));
-                      const cellDay = startOfDay(day);
-                      return cellDay >= eventStart && cellDay <= eventEnd;
-                    })
-                    .map(event => (
-                      <div
-                        key={event.id}
-                        className="event"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log("イベントクリック:", event.id);
-                          if (eventClick) {
-                            eventClick({ event: { id: event.id, title: event.title } });
-                          }
-                        }}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
-                  {clickedDate === dateStr && (
-                    <div className="event default-event">
-                      New Event
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <div className="calendar-months-wrapper">
+        {monthList.map((month, index) => {
+          const monthStart = startOfMonth(month);
+          const startDate = startOfWeek(monthStart);
+          const endDate = addDays(startDate, 41);
+          const days: Date[] = [];
 
-      <div
-        className="calendar-month current-month"
-        style={{ transform: `translateY(${scrollOffset}px)` }}
-      >
-        <h2>{format(currentDate, "MMMM yyyy")}</h2>
-        <div className="calendar-grid calendar-header-grid">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
-            <div key={day} className="calendar-day-header">{day}</div>
-          ))}
-        </div>
+          let day = startDate;
+          while (day <= endDate) {
+            days.push(day);
+            day = addDays(day, 1);
+          }
 
-        <div className="calendar-grid">
-          {days.map((day, index) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            return (
-              <div
-                key={index}
-                className={`calendar-day ${format(day, "MM") !== format(monthStart, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
-                onMouseDown={() => handleMouseDown(day)}
-                onMouseEnter={() => handleMouseEnter(day)}
-                onMouseUp={handleMouseUp}
-                onClick={(event) => handleDateClick(event, dateStr)}
-              >
-                <div className="day-number">{format(day, "d")}</div>
-                <div className="event-container">
-                  {events
-                    .filter(event => {
-                      const eventStart = startOfDay(new Date(event.start_time));
-                      const eventEnd = startOfDay(new Date(event.end_time));
-                      const cellDay = startOfDay(day);
-                      return cellDay >= eventStart && cellDay <= eventEnd;
-                    })
-                    .map(event => (
-                      <div
-                        key={event.id}
-                        className="event"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log("イベントクリック:", event.id);
-                          if (eventClick) {
-                            eventClick({ event: { id: event.id, title: event.title } });
-                          }
-                        }}
-                      >
-                        {event.title}
+          return (
+            <div
+              key={index}
+              className={`calendar-month ${index === activeMonthIndex ? 'active' : ''} ${transitioning ? (index > activeMonthIndex ? 'slide-down' : 'slide-up') : ''}`}
+            >
+              <h2>{format(month, "MMMM yyyy")}</h2>
+              <div className="calendar-grid">
+                {days.map((day, dayIndex) => {
+                  const dateStr = format(day, "yyyy-MM-dd");
+                  return (
+                    <div
+                      key={dayIndex}
+                      className={`calendar-day ${format(day, "MM") !== format(month, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
+                      onMouseDown={() => handleMouseDown(day)}
+                      onMouseEnter={() => handleMouseEnter(day)}
+                      onMouseUp={handleMouseUp}
+                      onClick={(event) => handleDateClick(event, dateStr)}
+                    >
+                      <div className="day-number">{format(day, "d")}</div>
+                      <div className="event-container">
+                        {events
+                          .filter(event => {
+                            const eventStart = startOfDay(new Date(event.start_time));
+                            const eventEnd = startOfDay(new Date(event.end_time));
+                            const cellDay = startOfDay(day);
+                            return cellDay >= eventStart && cellDay <= eventEnd;
+                          })
+                          .map(event => (
+                            <div
+                              key={event.id}
+                              className="event"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (eventClick) {
+                                  eventClick({ event: { id: event.id, title: event.title } });
+                                }
+                              }}
+                            >
+                              {event.title}
+                            </div>
+                          ))}
+                        {clickedDate === dateStr && (
+                          <div className="event default-event">
+                            New Event
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  {clickedDate === dateStr && (
-                    <div className="event default-event">
-                      New Event
                     </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <div
-        className="calendar-month next-month"
-        style={{ transform: `translateY(calc(100% + ${scrollOffset}px))` }}
-      >
-        <h2>{format(nextMonth, "MMMM yyyy")}</h2>
-        <div className="calendar-grid">
-          {days.map((day, index) => {
-            const dateStr = format(day, "yyyy-MM-dd");
-            return (
-              <div
-                key={index}
-                className={`calendar-day ${format(day, "MM") !== format(nextMonth, "MM") ? "other-month" : ""} ${isDragSelected(day) ? "drag-selected" : ""}`}
-                onMouseDown={() => handleMouseDown(day)}
-                onMouseEnter={() => handleMouseEnter(day)}
-                onMouseUp={handleMouseUp}
-                onClick={(event) => handleDateClick(event, dateStr)}
-              >
-                <div className="day-number">{format(day, "d")}</div>
-                <div className="event-container">
-                  {events
-                    .filter(event => {
-                      const eventStart = startOfDay(new Date(event.start_time));
-                      const eventEnd = startOfDay(new Date(event.end_time));
-                      const cellDay = startOfDay(day);
-                      return cellDay >= eventStart && cellDay <= eventEnd;
-                    })
-                    .map(event => (
-                      <div
-                        key={event.id}
-                        className="event"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          console.log("イベントクリック:", event.id);
-                          if (eventClick) {
-                            eventClick({ event: { id: event.id, title: event.title } });
-                          }
-                        }}
-                      >
-                        {event.title}
-                      </div>
-                    ))}
-                  {clickedDate === dateStr && (
-                    <div className="event default-event">
-                      New Event
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

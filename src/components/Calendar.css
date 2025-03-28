@@ -1,17 +1,19 @@
 .calendar-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: 100vh; /* ヘッダーの高さを引いた分をカレンダーの高さに設定 */
-    width: 100vw;
-    margin: 0;
-    box-sizing: border-box;
-    overflow: hidden;      /* 内容が画面を超えた場合はスクロール可能 */
-    font-family: Arial, sans-serif;
-    position: relative;
-    overflow: hidden; /* コンテナのオーバーフローを隠す */
+  position: relative;
+  height: 800px; /* 表示する1ヶ月分の高さに設定 */
+  width: 100%; /* 横幅は100% */
+  overflow-y: auto;
+  overflow-x: hidden; /* prevent horizontal scrolling */
 }
   
+.calendar-months-wrapper {
+  display: flex;
+  flex-direction: column;  /* ← 縦に並べるように修正 */
+  width: 100%;
+  background-color: rgba(0, 0, 255, 0.05);
+  transition: transform 0.3s ease-out;
+}
+
 .calendar-header {
     display: flex;
     justify-content: space-between;
@@ -25,6 +27,10 @@
     grid-template-columns: repeat(7, 1fr);
     grid-auto-rows: 1fr; /* 各行の高さを均等にする */
     gap: 0px;
+    width: 100%; /* ✅ これを追加 */
+    max-width: 100%;
+    box-sizing: border-box; /* ✅ 念のため */
+    border: 2px dashed blue;
 }
   
 .calendar-header-grid {
@@ -132,49 +138,18 @@
 }
 
 .calendar-month {
-    width: 100%;
-    scroll-snap-align: start;
-    margin-bottom: 20px;
-    animation: slideFade 1s ease-in-out;
-    display: none; /* 初期状態で非表示にする */
-    opacity: 0;
-    transition: opacity 4s ease-in-out;
-}
-
-.calendar-month.active {
-  display: block; /* アクティブな月のみ表示する */
-  opacity: 1;
-}
-
-@keyframes slideFade {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  display: block;         /* 念のため追加 */
+  width: 100%;
+  height: 600;           /* 高さが必要なら 600px 等に固定 */
+  box-sizing: border-box; /* 枠に収まるように */
+  flex: none; /* Prevent stretching horizontally */
 }
 
 .calendar-view-container {
-    height: calc(100vh - 50px); /* ヘッダーの高さを引いた分をカレンダーの高さに設定 */
+    height: auto;
     width: 100vw;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.calendar-container {
-  overflow: hidden;
-  position: relative;
-  height: 600px; /* カレンダーの高さを適切に設定 */
-}
-
-.calendar-month {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  transition: transform 0.3s ease-out;
+    flex-direction: column;
+    display: block;
+    justify-content: flex-start;
+    align-items: stretch;
 }
