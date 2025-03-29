@@ -43,15 +43,10 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   const [currentDate, setCurrentDate] = useState(() => {
     const initialDate = new Date();
-    console.log("Initial Current Date:", initialDate);
     return initialDate;
   });
   const visibleMonthRef = useRef<string>(format(currentDate, "yyyy-MM"));
   const [visibleMonth, setVisibleMonth] = useState<string>(visibleMonthRef.current);
-
-  useEffect(() => {
-    console.log("Updated Current Date:", currentDate);
-  }, [currentDate]);
 
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
@@ -131,9 +126,6 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           }
         }
       });
-
-      console.log("Closest Date:", closestDate);
-      console.log("Current Date:", currentDate);
 
       if (closestDate) {
         const newMonth = format(closestDate, "yyyy-MM");
