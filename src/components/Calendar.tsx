@@ -41,7 +41,18 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     return weeks;
   };
 
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const initialDate = new Date();
+    console.log("Initial Current Date:", initialDate);
+    return initialDate;
+  });
+  const visibleMonthRef = useRef<string>(format(currentDate, "yyyy-MM"));
+  const [visibleMonth, setVisibleMonth] = useState<string>(visibleMonthRef.current);
+
+  useEffect(() => {
+    console.log("Updated Current Date:", currentDate);
+  }, [currentDate]);
+
   const [dragStart, setDragStart] = useState<string | null>(null);
   const [dragEnd, setDragEnd] = useState<string | null>(null);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
@@ -119,22 +130,20 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
         }
       });
 
-      if (closestDate && !isSameMonth(closestDate, currentDate)) {
-        let direction: "up" | "down" = "down";
-        if (
-          closestDate !== null &&
-          closestDate < currentDate.getTime()
-        ) {
-          direction = "up";
+      console.log("Closest Date:", closestDate);
+      console.log("Current Date:", currentDate);
+
+      if (closestDate) {
+        const newMonth = format(closestDate, "yyyy-MM");
+        if (newMonth !== visibleMonthRef.current) {
+          visibleMonthRef.current = newMonth;
+          setVisibleMonth(newMonth);
+          setCurrentDate(closestDate);
+          setAnimatingHeader(true);
+          setTimeout(() => {
+            setAnimatingHeader(false);
+          }, 300);
         }
-        setScrollDirection(direction);
-        setAnimatingHeader(true);
-        setTimeout(() => {
-          if (closestDate !== null) {
-            setCurrentDate(closestDate);
-          }
-          setAnimatingHeader(false);
-        }, 300);
       }
     };
 
