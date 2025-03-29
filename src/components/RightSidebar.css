@@ -1,0 +1,106 @@
+.right-sidebar {
+    width: 200px;
+    padding: 16px;
+    border-left: 1px solid #ddd;
+    background-color: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: white;
+    padding: 8px 12px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .search-icon {
+    color: #888;
+    font-size: 1.2em;
+  }
+  
+  .search-bar input {
+    border: none;
+    outline: none;
+    flex: 1;
+    font-size: 14px;
+  }
+  
+  .search-results,
+  .recent-updates {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .user-entry {
+    display: flex;
+    gap: 10px;
+    padding: 8px;
+    background-color: white;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .user-entry:hover {
+    background-color: #e6f0ff;
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .name {
+    font-weight: bold;
+    font-size: 14px;
+  }
+  
+  .time {
+    font-size: 12px;
+    color: #888;
+  }
+  
+  .summary {
+    font-size: 13px;
+    color: #555;
+  }
+  
+  .section-divider {
+    height: 1px;
+    background-color: #ddd;
+    margin: 8px 0;
+  }
+  
+  .view-all {
+    margin-top: auto;
+    text-align: center;
+  }
+  
+  .view-all button {
+    padding: 8px 12px;
+    border: none;
+    background-color: #1976d2;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .view-all button:hover {
+    background-color: #125ca1;
+  }

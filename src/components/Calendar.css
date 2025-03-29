@@ -162,13 +162,31 @@
   font-weight: bold;
 }
 
-.calendar-header-sticky.animating.up {
+.weekday-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+  background-color: #f8f8f8;
+  font-weight: bold;
+  border-bottom: 1px solid #ddd;
+}
+
+.weekday-cell {
+  width: calc(100% / 7);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.calendar-header-title {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.calendar-header-title.animating.up {
   opacity: 0;
   transform: translateY(-20px);
 }
 
-.calendar-header-sticky.animating.down {
+.calendar-header-title.animating.down {
   opacity: 0;
   transform: translateY(20px);
 }
-

@@ -186,8 +186,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   return (
     <div className="calendar-container" ref={calendarRef}>
-      <div className={`calendar-header-sticky ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
-        <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+      <div className="calendar-header-sticky">
+        <div className={`calendar-header-title ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
+          <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+        </div>
+        <div className="weekday-row">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
+            <div key={idx} className="weekday-cell">{day}</div>
+          ))}
+        </div>
       </div>
       <div className="calendar-grid">
         {weeks.flat().map((day, index) => (

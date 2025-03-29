@@ -5,6 +5,7 @@ import CalendarView from "../components/CalendarView";
 import { getAuthenticatedUser } from '../app/actions';
 import type { UserRecord } from "../app/types";
 import { getFollowingUsers, getFollowers } from '../app/followActions';
+import RightSidebar from "../components/RightSidebar";
 
 // このページはサーバーコンポーネントとして実行されます
 export default async function CalendarPage() {
@@ -25,6 +26,7 @@ export default async function CalendarPage() {
         <div className="flex-1">
           <CalendarView />
         </div>
+        <RightSidebar updates={[]} />
       </div>
     </div>
   );
