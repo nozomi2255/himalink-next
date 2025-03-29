@@ -142,6 +142,20 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     return () => container.removeEventListener("scroll", handleScroll);
   }, [monthList]);
 
+  useEffect(() => {
+    const container = calendarRef.current;
+    if (!container) return;
+  
+    const todayEl = container.querySelector(`[data-date="${format(new Date(), 'yyyy-MM-dd')}"]`) as HTMLElement;
+    
+    if (todayEl) {
+      const containerCenter = container.clientHeight / 2;
+      const todayPosition = todayEl.offsetTop + todayEl.clientHeight / 2;
+  
+      container.scrollTop = todayPosition - containerCenter;
+    }
+  }, []);
+
   const monthStart = startOfMonth(monthList[activeMonthIndex]);
   const monthEnd = endOfMonth(monthStart);
 
