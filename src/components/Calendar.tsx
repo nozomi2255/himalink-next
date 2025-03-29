@@ -25,10 +25,10 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const getWeeksBetween = (months: Date[]): Date[][] => {
     const first = startOfWeek(startOfMonth(months[0]));
     const last = endOfWeek(endOfMonth(months[months.length - 1]));
-  
+
     const weeks: Date[][] = [];
     let current = first;
-  
+
     while (current <= last) {
       const week: Date[] = [];
       for (let i = 0; i < 7; i++) {
@@ -37,7 +37,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       }
       weeks.push(week);
     }
-  
+
     return weeks;
   };
 
@@ -65,9 +65,11 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const calendarRef = useRef<HTMLDivElement>(null);
   const weeks = getWeeksBetween(monthList);
   const [animatingHeader, setAnimatingHeader] = useState(false);
+  const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
 
   useEffect(() => {
     if (!modalOpen) {
+      setSelectedRange(null);
       setClickedDate(null);
     }
   }, [modalOpen]);
@@ -154,13 +156,13 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   useEffect(() => {
     const container = calendarRef.current;
     if (!container) return;
-  
+
     const todayEl = container.querySelector(`[data-date="${format(new Date(), 'yyyy-MM-dd')}"]`) as HTMLElement;
-    
+
     if (todayEl) {
       const containerCenter = container.clientHeight / 2;
       const todayPosition = todayEl.offsetTop + todayEl.clientHeight / 2;
-  
+
       container.scrollTop = todayPosition - containerCenter;
     }
   }, []);
@@ -174,7 +176,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       const start = startOfDay(new Date(dragStart));
       const end = startOfDay(new Date(dragEnd));
       const currentDay = startOfDay(day);
-      
+
       // ドラッグ範囲の日付を全て含む
       return currentDay >= start && currentDay <= end;
     }
@@ -201,6 +203,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const handleMouseUp = () => {
     if (dragStart && dragEnd && dragDateChange) {
       dragDateChange({ startDate: dragStart, endDate: dragEnd });
+      setSelectedRange({ start: dragStart, end: dragEnd }); // ←追加
     }
     setDragStart(null);
     setDragEnd(null);
@@ -240,7 +243,12 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           >
             <div className="day-number">{format(day, "d")}</div>
             <div className="event-container">
-              {dragStart && isDragSelected(day) ? (
+              {(dragStart && isDragSelected(day)) || (selectedRange && (() => {
+                const start = startOfDay(new Date(selectedRange.start));
+                const end = startOfDay(new Date(selectedRange.end));
+                const currentDay = startOfDay(day);
+                return currentDay >= start && currentDay <= end;
+              })()) ? (
                 <div className="event default-event">New Event</div>
               ) : clickedDate === format(day, "yyyy-MM-dd") ? (
                 <div className="event default-event">New Event</div>
