@@ -219,7 +219,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   };
 
   return (
-    <div className="calendar-container" ref={calendarRef}>
+    <div className="calendar-container" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
       <div className="calendar-header-sticky">
         <div className={`calendar-header-title ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
           <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
