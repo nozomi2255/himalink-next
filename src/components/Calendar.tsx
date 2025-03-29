@@ -171,9 +171,16 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   const isDragSelected = (day: Date) => {
     if (dragStart && dragEnd) {
-      const start = new Date(dragStart);
-      const end = new Date(dragEnd);
-      return !isBefore(day, start) && !isAfter(day, end);
+      const start = startOfDay(new Date(dragStart));
+      const end = startOfDay(new Date(dragEnd));
+      const currentDay = startOfDay(day);
+      
+      // ドラッグ範囲の日付を全て含む
+      return currentDay >= start && currentDay <= end;
+    }
+    // ドラッグが始まったばかりで終了日が未定の場合でも開始日は選択済みにする
+    if (dragStart && !dragEnd) {
+      return format(day, 'yyyy-MM-dd') === dragStart;
     }
     return false;
   };
@@ -181,6 +188,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const handleMouseDown = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
     setDragStart(dateStr);
+    setClickedDate(null);
     setDragEnd(dateStr);
   };
 
@@ -232,6 +240,12 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           >
             <div className="day-number">{format(day, "d")}</div>
             <div className="event-container">
+              {dragStart && isDragSelected(day) ? (
+                <div className="event default-event">New Event</div>
+              ) : clickedDate === format(day, "yyyy-MM-dd") ? (
+                <div className="event default-event">New Event</div>
+              ) : null}
+
               {events
                 .filter(event => {
                   const eventStart = startOfDay(new Date(event.start_time));
@@ -245,17 +259,12 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
                     className="event"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (eventClick) {
-                        eventClick({ event: { id: event.id, title: event.title } });
-                      }
+                      eventClick && eventClick({ event: { id: event.id, title: event.title } });
                     }}
                   >
                     {event.title}
                   </div>
                 ))}
-              {clickedDate === format(day, "yyyy-MM-dd") && (
-                <div className="event default-event">New Event</div>
-              )}
             </div>
           </div>
         ))}
