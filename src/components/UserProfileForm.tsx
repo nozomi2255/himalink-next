@@ -101,8 +101,7 @@ export default function UserProfileForm({ profile }: Props) {
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
         <UserAvatar
-          avatarUrl={localAvatarUrl} // localAvatarUrlを使用
-          username={profile.username || ""}
+          userId={profile.id} // userIdを使用
           onClick={handleAvatarChange} // 画像変更のためのクリックハンドラ
           size={80}
         />

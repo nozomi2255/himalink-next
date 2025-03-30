@@ -61,3 +61,13 @@
     font-size: 13px;
     cursor: pointer;
   }
+
+  .home-button {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px; /* アバターと同じ余白 */
+    cursor: pointer;
+  }
