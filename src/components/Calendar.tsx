@@ -90,7 +90,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     const startLeft = firstDayEl.offsetLeft;
     const endRight = lastDayEl.offsetLeft + lastDayEl.offsetWidth;
 
-    const top = startTop + firstDayEl.offsetHeight - 30;
+    const top = startTop + 24; // match .day-number top margin
     const left = startLeft;
     const width = endRight - startLeft;
 
@@ -98,10 +98,11 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
 
   useEffect(() => {
-    if (!modalOpen) {
-      setSelectedRange(null);
-      setClickedDate(null);
-    }
+  if (!modalOpen) {
+    setSelectedRange(null);
+    setClickedDate(null);
+    setBarStyle(null);
+  }
   }, [modalOpen]);
 
   useEffect(() => {
