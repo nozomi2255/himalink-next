@@ -7,6 +7,11 @@ import {
 import "./Calendar.css";
 import { Event } from "../app/types";
 
+// TODO: デフォルトイベントコンテナを列を跨ぐ場合も表示できるようにする。
+// TODO: 現在、ドラッグで、前の日付に戻る場合はデフォルトイベントコンテナを適用できないことを改善する。
+// TODO: DBから取得したイベントコンテナに関しても、複数日の予定は、連なったイベントコンテナを表示するようにする。
+// TODO: 月遷移のスクロールに関して、週単位か、月単位のスクロールしかできないように制限する。微妙なスクロールはできないようにする.
+
 
 interface CalendarProps {
   events: Event[];
@@ -251,14 +256,14 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       <div className="multi-day-events-layer">
         {(barStyle && !clickedDate) && (
           <div
-            className="multi-day-event-bar"
+            className={`multi-day-event-bar${dragStart ? " dragging" : ""}`}
             style={barStyle}
             onClick={(e) => {
               e.stopPropagation();
               console.log("Event bar clicked");
             }}
           >
-            Event
+            New Event
           </div>
         )}
       </div>
