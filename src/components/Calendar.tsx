@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth
 } from "date-fns";
@@ -61,6 +61,41 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   const weeks = getWeeksBetween(monthList);
   const [animatingHeader, setAnimatingHeader] = useState(false);
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
+  const [barStyle, setBarStyle] = useState<React.CSSProperties | null>(null);
+
+  useLayoutEffect(() => {
+    if ((!selectedRange && !dragStart) || !calendarRef.current || clickedDate) return;
+
+    const startDate = selectedRange ? selectedRange.start : dragStart;
+    const endDate = selectedRange ? selectedRange.end : dragEnd;
+
+    if (!startDate || !endDate) return;
+
+    const start = startOfDay(new Date(startDate));
+    const end = startOfDay(new Date(endDate));
+
+    const allDays = weeks.flat().filter(day => {
+      const current = startOfDay(day);
+      return current >= start && current <= end;
+    });
+
+    if (allDays.length === 0) return;
+
+    const firstDayEl = document.querySelector(`[data-date="${format(allDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
+    const lastDayEl = document.querySelector(`[data-date="${format(allDays[allDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
+
+    if (!firstDayEl || !lastDayEl) return;
+
+    const startTop = firstDayEl.offsetTop;
+    const startLeft = firstDayEl.offsetLeft;
+    const endRight = lastDayEl.offsetLeft + lastDayEl.offsetWidth;
+
+    const top = startTop + firstDayEl.offsetHeight - 30;
+    const left = startLeft;
+    const width = endRight - startLeft;
+
+    setBarStyle({ top: `${top}px`, left: `${left}px`, width: `${width}px` });
+  }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
 
   useEffect(() => {
     if (!modalOpen) {
@@ -212,6 +247,20 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
 
   return (
     <div className="calendar-container" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
+      <div className="multi-day-events-layer">
+        {(barStyle && !clickedDate) && (
+          <div
+            className="multi-day-event-bar"
+            style={barStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              console.log("Event bar clicked");
+            }}
+          >
+            Event
+          </div>
+        )}
+      </div>
       <div className="calendar-header-sticky">
         <div className={`calendar-header-title ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
           <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
@@ -235,16 +284,9 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           >
             <div className="day-number">{format(day, "d")}</div>
             <div className="event-container">
-              {(dragStart && isDragSelected(day)) || (selectedRange && (() => {
-                const start = startOfDay(new Date(selectedRange.start));
-                const end = startOfDay(new Date(selectedRange.end));
-                const currentDay = startOfDay(day);
-                return currentDay >= start && currentDay <= end;
-              })()) ? (
+              {clickedDate === format(day, "yyyy-MM-dd") && (
                 <div className="event default-event">New Event</div>
-              ) : clickedDate === format(day, "yyyy-MM-dd") ? (
-                <div className="event default-event">New Event</div>
-              ) : null}
+              )}
 
               {events
                 .filter(event => {
