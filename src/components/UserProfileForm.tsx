@@ -4,6 +4,9 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import UserAvatar from "./UserAvatar"; // UserAvatarをインポート
+import FollowingModal from "./FollowingModal";
+import FollowersModal from "./FollowersModal";
+import type { UserRecord } from "@/app/types";
 
 interface UserProfile {
   id: string;
@@ -16,14 +19,18 @@ interface UserProfile {
 
 interface Props {
   profile: UserProfile;
+  followingUsers: UserRecord[];
+  followers: UserRecord[];
 }
 
-export default function UserProfileForm({ profile }: Props) {
+export default function UserProfileForm({ profile, followingUsers, followers }: Props) {
   const [username, setUsername] = useState(profile.username);
   const [fullName, setFullName] = useState(profile.full_name || "");
   const [bio, setBio] = useState(profile.bio || "");
   const [avatarFile, setAvatarFile] = useState<File | null>(null); // アップロードする画像ファイル
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(profile.avatar_url || null);
+  const [showFollowingModal, setShowFollowingModal] = useState(false);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
 
   // プロフィールを更新する関数
   const handleUpdate = async () => {
@@ -133,12 +140,39 @@ export default function UserProfileForm({ profile }: Props) {
           rows={4}
         />
       </div>
+      <div className="flex gap-4">
+        <button
+          onClick={() => setShowFollowingModal(true)}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          フォロー {followingUsers.length}
+        </button>
+        <button
+          onClick={() => setShowFollowersModal(true)}
+          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+        >
+          フォロワー {followers.length}
+        </button>
+      </div>
       <button
         onClick={handleUpdate}
         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
       >
         更新する
       </button>
+
+      {showFollowingModal && (
+        <FollowingModal
+          followingUsers={followingUsers}
+          onClose={() => setShowFollowingModal(false)}
+        />
+      )}
+      {showFollowersModal && (
+        <FollowersModal
+          followers={followers}
+          onClose={() => setShowFollowersModal(false)}
+        />
+      )}
     </div>
   );
 }

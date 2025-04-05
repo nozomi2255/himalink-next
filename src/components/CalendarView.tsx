@@ -4,24 +4,44 @@ import React, { useState, useEffect } from "react";
 import Calendar from "./Calendar";
 import { Event } from '../app/types';
 import EventFormModal from "./EventFormModal";
+import { createClient } from "@/utils/supabase/client";
 
-export default function CalendarView() {
+interface CalendarViewProps {
+  userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
+}
+
+export default function CalendarView({ userId }: CalendarViewProps) {
   const [events, setEvents] = useState<Event[]>([]);
 
-  // イベント一覧を取得する関数（fetchを使う）
+  const supabase = createClient();
+
+  // イベント一覧を取得する関数（RPCを使用）
   const fetchEvents = async () => {
-    const res = await fetch(`/api/event`, { cache: "no-store" });
-    if (res.ok) {
-      const data: Event[] = await res.json();
-      setEvents(data);
+    if (userId) {
+      // 他のユーザーのイベントを取得
+      const { data, error } = await supabase
+        .rpc('get_user_events', { _user_id: userId });
+
+      if (error) {
+        console.error("Failed to fetch events:", error);
+        return;
+      }
+      setEvents(data || []);
     } else {
-      console.error("Failed to fetch events");
+      // 現在のユーザーのイベントを取得（既存の実装）
+      const res = await fetch(`/api/event`, { cache: "no-store" });
+      if (res.ok) {
+        const data: Event[] = await res.json();
+        setEvents(data);
+      } else {
+        console.error("Failed to fetch events");
+      }
     }
   };
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [userId]); // userIdが変更されたときにも再取得
 
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);

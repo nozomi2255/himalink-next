@@ -1,52 +1,49 @@
 // components/FollowersModal.tsx
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { useRouter } from "next/navigation";
 import type { UserRecord } from "../app/types";
 
 interface FollowersModalProps {
   followers: UserRecord[];
+  onClose: () => void;
 }
 
+export default function FollowersModal({ followers, onClose }: FollowersModalProps) {
+  const router = useRouter();
 
-export default function FollowersModal({ followers }: FollowersModalProps) {
-  const [visible, setVisible] = useState(true);
-
-  // 内部でユーザークリック時の処理を定義
+  // ユーザークリック時の処理を定義
   const handleUserClick = (userId: string) => {
-    console.log("ユーザーがクリックされました:", userId);
-    // ここに必要な内部処理（例: 詳細画面への遷移など）を実装します
+    router.push(`/other-calendar/${userId}`);
+    onClose(); // モーダルを閉じる
   };
 
-  // 内部でモーダルを閉じる処理を定義
-  const handleClose = () => {
-    setVisible(false);
-  };
-
-  if (!visible) return null;
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded shadow-lg w-80">
+      <div className="absolute inset-0 bg-black opacity-50" onClick={onClose}></div>
+      <div className="bg-white p-6 rounded shadow-lg w-80 relative z-10">
         <h2 className="text-xl font-bold">フォロワー</h2>
         <ul className="mt-2">
           {followers.length > 0 ? (
             followers.map((user) => (
-              <li key={user.id} 
-              className="p-2 border-b cursor-pointer" 
-              onClick={() => handleUserClick(user.id)}
+              <li 
+                key={user.id} 
+                className="p-2 border-b cursor-pointer hover:bg-gray-100" 
+                onClick={() => handleUserClick(user.id)}
               >
                 {user.username} ({user.email})
               </li>
             ))
           ) : (
-            <p>No followers found.</p>
+            <p>フォロワーはいません</p>
           )}
         </ul>
         <button 
-          onClick={handleClose} 
-          className="mt-4 bg-gray-500 text-white px-4 py-2 rounded"
+          onClick={onClose} 
+          className="mt-4 bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
         >
-          Close
+          閉じる
         </button>
       </div>
     </div>
