@@ -240,14 +240,31 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       dragDateChange({ startDate: dragStart, endDate: dragEnd });
       setSelectedRange({ start: dragStart, end: dragEnd }); // ←追加
     }
+    const dayElement = document.querySelector(`[data-date="${dragStart}"]`) as HTMLElement;
+    if (!dayElement) return;
+    const rect = dayElement.getBoundingClientRect();
+    let newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
+    if (dragStart) {
+      const dayOfWeek = new Date(dragStart).getDay();
+      if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
+        newPosition = { top: rect.top + window.scrollY, left: rect.left - 300 }; // 左に表示
+      }
+    }
+    setModalPosition(newPosition);
+
     setDragStart(null);
     setDragEnd(null);
   };
 
-  const handleDateClick = (event: React.MouseEvent, dateStr: string) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
-    console.log("Modal Position:", newPosition);
+  const handleDateClick = (dateStr: string) => {
+    const dayElement = document.querySelector(`[data-date="${dateStr}"]`) as HTMLElement;
+    if (!dayElement) return;
+    const rect = dayElement.getBoundingClientRect();
+    let newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
+    const dayOfWeek = new Date(dateStr).getDay();
+    if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
+      newPosition = { top: rect.top + window.scrollY, left: rect.left - 300 }; // 左に表示
+    }
     setModalPosition(newPosition);
     setClickedDate(dateStr);
     dateClick && dateClick({ dateStr });
@@ -288,7 +305,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
             onMouseDown={() => handleMouseDown(day)}
             onMouseEnter={() => handleMouseEnter(day)}
             onMouseUp={handleMouseUp}
-            onClick={(event) => handleDateClick(event, format(day, "yyyy-MM-dd"))}
+            onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
           >
             <div className="day-number">{format(day, "d")}</div>
             <div className="event-container">

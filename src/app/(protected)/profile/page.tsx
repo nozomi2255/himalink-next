@@ -1,9 +1,9 @@
 // app/profile/page.tsx
 import React from "react";
 import Head from "next/head";
-import { getAuthenticatedUser } from "../../app/actions";
-import { getFollowingUsers, getFollowers } from "../../app/followActions";
-import UserProfileForm from "../../components/UserProfileForm";
+import { getAuthenticatedUser } from "../../actions";
+import { getFollowingUsers, getFollowers } from "../../followActions";
+import UserProfileForm from "../../../components/UserProfileForm";
 import type { UserRecord } from "@/app/types";
 
 export default async function ProfilePage() {

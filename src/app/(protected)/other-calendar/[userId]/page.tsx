@@ -1,9 +1,9 @@
 // src/app/other-calendar/[userId]/page.tsx
 import React from 'react';
-import CalendarView from "../../../components/CalendarView";
-import { getUserRecord } from "../../../app/actions";
-import type { UserRecord } from "../../../app/types";
-import { getFollowingUsers, getFollowers } from "../../../app/followActions";
+import CalendarView from "../../../../components/CalendarView";
+import { getUserRecord } from "../../../actions";
+import type { UserRecord } from "../../../types";
+import { getFollowingUsers, getFollowers } from "../../../followActions";
 
 interface OtherCalendarPageProps {
   params: {

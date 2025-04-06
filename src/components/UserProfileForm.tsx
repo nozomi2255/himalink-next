@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import UserAvatar from "./UserAvatar"; // UserAvatarをインポート
 import FollowingModal from "./FollowingModal";
 import FollowersModal from "./FollowersModal";
 import type { UserRecord } from "@/app/types";
+import { useRouter } from "next/navigation";
 
 interface UserProfile {
   id: string;
@@ -31,10 +32,12 @@ export default function UserProfileForm({ profile, followingUsers, followers }: 
   const [localAvatarUrl, setLocalAvatarUrl] = useState<string | null>(profile.avatar_url || null);
   const [showFollowingModal, setShowFollowingModal] = useState(false);
   const [showFollowersModal, setShowFollowersModal] = useState(false);
-
+  const router = useRouter();
   // プロフィールを更新する関数
   const handleUpdate = async () => {
-    let newAvatarUrl = localAvatarUrl; // 既存のローカルstateを初期値に
+    let newAvatarUrl = localAvatarUrl; // 既存のローカルstateを初期値に設定
+    const supabase = createClient(); 
+
 
     // 画像ファイルが選択されている場合、アップロード処理を行う
     if (avatarFile) {
@@ -104,6 +107,20 @@ export default function UserProfileForm({ profile, followingUsers, followers }: 
     fileInput.click(); // ファイル選択ダイアログを開く
   };
 
+  // ログアウト関数
+  const handleLogout = async () => {
+    const supabase = createClient();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      alert("ログアウトに失敗しました。");
+      console.error("Logout error:", error);
+    } else {
+      alert("ログアウトしました。");
+      // 必要に応じてリダイレクトを行う
+      router.push("/auth");
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center space-x-4">
@@ -159,6 +176,12 @@ export default function UserProfileForm({ profile, followingUsers, followers }: 
         className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
       >
         更新する
+      </button>
+      <button
+        onClick={handleLogout}
+        className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+      >
+        ログアウト
       </button>
 
       {showFollowingModal && (

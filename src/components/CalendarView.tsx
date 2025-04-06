@@ -52,8 +52,8 @@ export default function CalendarView({ userId }: CalendarViewProps) {
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
   // 日付がクリックされたときの処理
-  const handleDateClick = (arg: { dateStr: string }) => {
-    setSelectedDate(arg.dateStr);
+  const handleDateClick = (dateStr: string) => {
+    setSelectedDate(dateStr);
     setSelectedEventId(""); // 追加の場合はイベントIDは空にする
     setSelectedEventTitle(""); // 追加の場合はタイトルは空にする
     setIsEventFormModalOpen(true);
@@ -71,6 +71,7 @@ export default function CalendarView({ userId }: CalendarViewProps) {
     console.log("handleCloseEventFormModal called");
     fetchEvents(); // モーダルを閉じる際に最新のイベントを取得
     setIsEventFormModalOpen(false);
+    setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
   };
 
   const handleDragDateChange = ({ startDate, endDate }: { startDate: string; endDate: string }) => {
@@ -90,12 +91,7 @@ export default function CalendarView({ userId }: CalendarViewProps) {
         events={events} 
         editable={true} 
         selectable={true} 
-        dateClick={(arg) => {
-          setSelectedDate(arg.dateStr);
-          setSelectedEventId("");
-          setSelectedEventTitle("");
-          setIsEventFormModalOpen(true);
-        }}
+        dateClick={(arg) => handleDateClick(arg.dateStr)}
         eventClick={(arg) => {
           setSelectedEventId(arg.event.id);
           setSelectedEventTitle(arg.event.title);

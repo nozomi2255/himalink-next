@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { signup } from "./actions"; // サインアップ処理をインポート
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"; // アイコンをインポート
-import { createClient } from '../../utils/supabase/client'; // Supabaseクライアントをインポート
+import { createClient } from "@/utils/supabase/client"; // Supabaseクライアントをインポート
 
 // onClose プロパティの型を定義
 interface SignupModalProps {
