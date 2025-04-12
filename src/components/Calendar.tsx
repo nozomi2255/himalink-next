@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth
 } from "date-fns";
-import "./Calendar.css";
 import { Event } from "../app/types";
 
 // TODO: デフォルトイベントコンテナを列を跨ぐ場合も表示できるようにする。
@@ -105,11 +104,11 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
 
   useEffect(() => {
-  if (!modalOpen) {
-    setSelectedRange(null);
-    setClickedDate(null);
-    setBarStyle(null);
-  }
+    if (!modalOpen) {
+      setSelectedRange(null);
+      setClickedDate(null);
+      setBarStyle(null);
+    }
   }, [modalOpen]);
 
   useEffect(() => {
@@ -150,7 +149,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
     if (!container) return;
 
     const handleScroll = () => {
-      const days = Array.from(container.querySelectorAll(".calendar-day")) as HTMLDivElement[];
+      const days = Array.from(container.querySelectorAll("[data-date]")) as HTMLDivElement[];
       const containerCenter = container.getBoundingClientRect().top + container.clientHeight / 2;
 
       let closestDate: Date | null = null;
@@ -271,11 +270,13 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
   };
 
   return (
-    <div className="calendar-container" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
-      <div className="multi-day-events-layer">
+    /* 1. カレンダー全体のコンテナ */
+    <div className="relative h-full w-full overflow-y-auto overflow-x-hidden" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
+      /* 2. 複数日イベントレイヤー */
+      <div className="absolute inset-0 pointer-events-none z-[1000]">
         {(barStyle && !clickedDate) && (
           <div
-            className={`multi-day-event-bar${dragStart ? " dragging" : ""}`}
+            className={`absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] animate-fadeIn ${dragStart ? 'pointer-events-none' : 'pointer-events-auto'}`}
             style={barStyle}
             onClick={(e) => {
               e.stopPropagation();
@@ -286,55 +287,74 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
           </div>
         )}
       </div>
-      <div className="calendar-header-sticky">
-        <div className={`calendar-header-title ${animatingHeader ? `animating ${scrollDirection}` : ""}`}>
-          <h2>{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+      /* 3. 固定ヘッダー部 */
+      <div className="sticky top-0 z-[100] bg-white border-b border-gray-300 shadow-sm p-2">
+        <div className={`transition-opacity transition-transform duration-300 ${animatingHeader ? (scrollDirection === 'up' ? 'opacity-0 -translate-y-5' : 'opacity-0 translate-y-5') : ''}`}>
+          <h2 className="text-xl font-bold m-0">{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
         </div>
-        <div className="weekday-row">
+        <div className="flex justify-between px-2 bg-gray-100 font-bold border-b border-gray-200">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
-            <div key={idx} className="weekday-cell">{day}</div>
+            <div key={idx} className="w-1/7 text-center py-2">{day}</div>
           ))}
         </div>
       </div>
-      <div className="calendar-grid">
-        {weeks.flat().map((day, index) => (
-          <div
-            key={index}
-            className={`calendar-day ${isSameMonth(day, currentDate) ? 'current-month' : 'other-month'}`}
-            data-date={format(day, "yyyy-MM-dd")}
-            onMouseDown={() => handleMouseDown(day)}
-            onMouseEnter={() => handleMouseEnter(day)}
-            onMouseUp={handleMouseUp}
-            onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
-          >
-            <div className="day-number">{format(day, "d")}</div>
-            <div className="event-container">
-              {clickedDate === format(day, "yyyy-MM-dd") && (
-                <div className="event default-event">New Event</div>
-              )}
 
-              {events
-                .filter(event => {
-                  const eventStart = startOfDay(new Date(event.start_time));
-                  const eventEnd = startOfDay(new Date(event.end_time));
-                  const cellDay = startOfDay(day);
-                  return cellDay >= eventStart && cellDay <= eventEnd;
-                })
-                .map(event => (
-                  <div
-                    key={event.id}
-                    className="event"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      eventClick && eventClick({ event: { id: event.id, title: event.title } });
-                    }}
-                  >
-                    {event.title}
+      /* 4. カレンダー日付グリッド */
+      <div className="grid grid-cols-7 w-full max-w-full box-border">
+        {weeks.flat().map((day, index) => {
+          const isCurrentMonth = isSameMonth(day, currentDate);
+
+          return (
+            <div
+              key={index}
+              data-date={format(day, "yyyy-MM-dd")}
+              onMouseDown={() => handleMouseDown(day)}
+              onMouseEnter={() => handleMouseEnter(day)}
+              onMouseUp={handleMouseUp}
+              onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
+              className={`relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start border transition-colors duration-200 ease-in-out ${
+                isCurrentMonth
+                  ? 'bg-white border-gray-300 hover:bg-blue-50 animate-fadeIn'
+                  : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
+              }`}
+            >
+              <div
+                className={`absolute top-1 left-1 font-bold ${isSameMonth(day, currentDate) ? 'text-black opacity-100' : 'text-gray-500 opacity-30'
+                  }`}
+              >
+                {format(day, "d")}
+              </div>
+              {/* イベントの表示コンテナ（絶対位置） */}
+              <div className="absolute z-10 w-full box-border rounded-lg">
+                {clickedDate === format(day, "yyyy-MM-dd") && (
+                  <div className="bg-blue-200 italic shadow-md rounded-lg animate-fadeIn px-1 py-0.5">
+                    New Event
                   </div>
-                ))}
+                )}
+
+                {events
+                  .filter(event => {
+                    const eventStart = startOfDay(new Date(event.start_time));
+                    const eventEnd = startOfDay(new Date(event.end_time));
+                    const cellDay = startOfDay(day);
+                    return cellDay >= eventStart && cellDay <= eventEnd;
+                  })
+                  .map(event => (
+                    <div
+                      key={event.id}
+                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        eventClick && eventClick({ event: { id: event.id, title: event.title } });
+                      }}
+                    >
+                      {event.title}
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
