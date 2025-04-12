@@ -13,5 +13,5 @@ export default async function CalendarPage() {
     throw new Error("Authenticated user not found.");
   }
 
-  return <CalendarView userId={userRecord.id} />;
+  return <CalendarView userId={userRecord.id} currentUserId={userRecord.id} />;
 }

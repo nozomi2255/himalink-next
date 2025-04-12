@@ -5,13 +5,16 @@ import Calendar from "./Calendar";
 import { Event } from '../app/types';
 import EventFormModal from "./EventFormModal";
 import { createClient } from "@/utils/supabase/client";
+import { EventDetailDialog } from "./EventDetailDialog";
 
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
+  currentUserId: string; 
 }
 
-export default function CalendarView({ userId }: CalendarViewProps) {
+export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
   const [events, setEvents] = useState<Event[]>([]);
+  const isOwner = !userId || userId === currentUserId;
 
   const supabase = createClient();
 
@@ -45,6 +48,7 @@ export default function CalendarView({ userId }: CalendarViewProps) {
 
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);
+  const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
@@ -63,7 +67,11 @@ export default function CalendarView({ userId }: CalendarViewProps) {
   const handleEventClick = (arg: { event: { id: string, title: string } }) => {
     setSelectedEventId(arg.event.id);
     setSelectedEventTitle(arg.event.title); // クリックされたイベントのタイトルを設定
-    setIsEventFormModalOpen(true);
+    if (isOwner) {
+      setIsEventFormModalOpen(true);
+    } else {
+      setShowDetailDialog(true);
+    }
   };
   
   // モーダルを閉じる処理
@@ -92,25 +100,33 @@ export default function CalendarView({ userId }: CalendarViewProps) {
         editable={true} 
         selectable={true} 
         dateClick={(arg) => handleDateClick(arg.dateStr)}
-        eventClick={(arg) => {
-          setSelectedEventId(arg.event.id);
-          setSelectedEventTitle(arg.event.title);
-          setIsEventFormModalOpen(true);
-        }}
-        dragDateChange={handleDragDateChange}
+        eventClick={handleEventClick}
+        dragDateChange={isOwner ? handleDragDateChange : undefined}
         modalOpen={isEventFormModalOpen}
         modalPosition={modalPosition}
         setModalPosition={setModalPosition}
       />
-      {isEventFormModalOpen && (
-        <EventFormModal
-          selectedStartDate={selectedRange?.startDate || ""}
-          selectedEndDate={selectedRange?.endDate || ""}
-          selectedEventId={selectedEventId}
-          selectedEventTitle={selectedEventTitle}
-          modalPosition={modalPosition}
-          onClose={handleCloseEventFormModal}
-        />
+      
+      {isOwner ? (
+        isEventFormModalOpen && (
+          <EventFormModal
+            selectedStartDate={selectedRange?.startDate || ""}
+            selectedEndDate={selectedRange?.endDate || ""}
+            selectedEventId={selectedEventId}
+            selectedEventTitle={selectedEventTitle}
+            modalPosition={modalPosition}
+            onClose={handleCloseEventFormModal}
+          />
+        )
+      ) : (
+        showDetailDialog && (
+          <EventDetailDialog
+            entryId={selectedEventId}
+            currentUserId={currentUserId}
+            open={showDetailDialog}
+            onOpenChange={setShowDetailDialog}
+          />
+        )
       )}
     </div>
   );

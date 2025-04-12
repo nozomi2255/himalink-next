@@ -1,7 +1,7 @@
 // src/app/other-calendar/[userId]/page.tsx
 import React from 'react';
 import CalendarView from "../../../../components/CalendarView";
-import { getUserRecord } from "../../../actions";
+import { getAuthenticatedUser, getUserRecord } from "../../../actions";
 import type { UserRecord } from "../../../types";
 import { getFollowingUsers, getFollowers } from "../../../followActions";
 
@@ -21,9 +21,15 @@ export default async function OtherCalendarPage({ params }: OtherCalendarPagePro
     throw new Error("User record not found.");
   }
 
+  // サーバー側で認証済みユーザーの詳細情報（fullRecord）を取得する
+  const cullentUserRecord = await getAuthenticatedUser();
+  if (!cullentUserRecord) {
+    throw new Error("Authenticated user not found.");
+  }
+
   // フォロー中、フォロワー情報の取得
   const followingUsers = await getFollowingUsers(userId);
   const followers = await getFollowers(userId);
 
-  return <CalendarView userId={userId} />;
+  return <CalendarView userId={userId} currentUserId={cullentUserRecord.id} />;
 }
