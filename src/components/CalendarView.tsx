@@ -14,8 +14,24 @@ interface CalendarViewProps {
 export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const isOwner = !userId || userId === currentUserId;
-
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [username, setUsername] = useState<string>("");
   const supabase = createClient();
+
+  //AvatarUrlを取得
+  const fetchAvatarUrl = async () => {
+    console.log("userId:", userId)
+    const { data, error } = await supabase.rpc("get_user_avatar", {
+      user_id: userId,
+    });
+
+    if (error) {
+      console.error("Failed to fetch user avatar info:", error.message);
+    } else if (data && data.length > 0) {
+      setAvatarUrl(data[0].avatar_url);
+      setUsername(data[0].username);
+    }
+  };
 
   // イベント一覧を取得する関数（RPCを使用）
   const fetchEvents = async () => {
@@ -43,6 +59,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
 
   useEffect(() => {
     fetchEvents();
+    fetchAvatarUrl();
   }, [userId]); // userIdが変更されたときにも再取得
 
   // EventFormModal の表示状態を管理（初期状態は非表示）
@@ -52,6 +69,13 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
   const [selectedRange, setSelectedRange] = useState<{ startDate: string; endDate: string } | null>(null);
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if(!dialogOpen) {
+      setSelectedEventId("");
+      setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
+    }
+  }, [dialogOpen]); // userIdが変更されたときにも再取得
 
   // 日付がクリックされたときの処理
   const handleDateClick = (dateStr: string) => {
@@ -71,14 +95,6 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     console.log("isOwner:", isOwner)
   };
 
-  // モーダルを閉じる処理
-  const handleCloseEventFormModal: () => void = () => {
-    console.log("handleCloseEventFormModal called");
-    fetchEvents(); // モーダルを閉じる際に最新のイベントを取得
-    setDialogOpen(false);
-    setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
-  };
-
   const handleDragDateChange = ({ startDate, endDate }: { startDate: string; endDate: string }) => {
     setSelectedRange({ startDate, endDate });
     setDialogOpen(true);
@@ -87,6 +103,8 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <Calendar
+        avatarUrl={avatarUrl}
+        username={username}
         events={events}
         editable={true}
         selectable={true}

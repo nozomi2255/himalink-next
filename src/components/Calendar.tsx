@@ -5,6 +5,7 @@ import {
   startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth
 } from "date-fns";
 import { Event } from "../app/types";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 // TODO: デフォルトイベントコンテナを列を跨ぐ場合も表示できるようにする。
 // TODO: 現在、ドラッグで、前の日付に戻る場合はデフォルトイベントコンテナを適用できないことを改善する。
@@ -15,6 +16,8 @@ import { Event } from "../app/types";
 
 
 interface CalendarProps {
+  avatarUrl: string | null;
+  username: string;
   events: Event[];
   editable?: boolean;
   selectable?: boolean;
@@ -26,7 +29,7 @@ interface CalendarProps {
   setModalPosition: React.Dispatch<React.SetStateAction<{ top: number; left: number }>>;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
+const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
 
   const getWeeksBetween = (months: Date[]): Date[][] => {
     const first = startOfWeek(startOfMonth(months[0]));
@@ -289,8 +292,15 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
       </div>
       /* 3. 固定ヘッダー部 */
       <div className="sticky top-0 z-[50] bg-white border-b border-gray-300 shadow-sm p-2">
-        <div className={`transition-opacity transition-transform duration-300 ${animatingHeader ? (scrollDirection === 'up' ? 'opacity-0 -translate-y-5' : 'opacity-0 translate-y-5') : ''}`}>
-          <h2 className="text-xl font-bold m-0">{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+        <div className="flex items-center justify-between px-2">
+          <div className={`transition-opacity transition-transform duration-300 ${animatingHeader ? (scrollDirection === 'up' ? 'opacity-0 -translate-y-5' : 'opacity-0 translate-y-5') : ''}`}>
+            <h2 className="text-xl font-bold m-0">{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+          </div>
+          {/* アバター配置 */}
+          <Avatar>
+            <AvatarImage src={avatarUrl || "/default-avatar.png"} alt={username} />
+            <AvatarFallback>{username?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
         </div>
         <div className="flex justify-between px-2 bg-gray-100 font-bold border-b border-gray-200">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
@@ -313,8 +323,8 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
               onMouseUp={handleMouseUp}
               onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
               className={`relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start border transition-colors duration-200 ease-in-out ${isCurrentMonth
-                  ? 'bg-white border-gray-300 hover:bg-blue-50 animate-fadeIn'
-                  : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
+                ? 'bg-white border-gray-300 hover:bg-blue-50 animate-fadeIn'
+                : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
                 }`}
             >
               <div
