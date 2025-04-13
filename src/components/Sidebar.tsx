@@ -1,11 +1,10 @@
 'use client'
 
 import { useRouter } from "next/navigation";
-import { HomeIcon } from '@heroicons/react/24/solid';
+import { CalendarDays, User } from "lucide-react"
 import { useEffect, useState } from "react";
 import { createClient } from '@/utils/supabase/client';
-import UserAvatar from "@/components/UserAvatar";
-
+import { Button } from "@/components/ui/button";
 import React from "react";
 import "./Sidebar.css"; // スタイルは別ファイルで定義（後述）
 
@@ -34,32 +33,30 @@ const Sidebar = () => {
     getUserId();
   }, []);
 
-  const handleAvatarClick = () => {
-    if (userId) {
-      router.push('/profile');
-    } else {
-      console.warn('User ID is null, cannot navigate to profile.');
-    }
-  };
-
   return (
-    <div className="sidebar">
+    <div className="w-[180px] bg-[#f8faff] p-5 gap-2 flex flex-col items-center border-r border-[#ddd] h-screen">
       {/* ホーム画面への遷移ボタン */}
-      <div className="home-button" onClick={() => router.push('/')}>
-        <HomeIcon style={{ width: '24px', height: '24px', marginRight: '8px' }} />
-      </div>
+      <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+        <CalendarDays className="size-6" />
+      </Button>
 
       {/* プロフィールアイコン */}
-      <div className="avatar" onClick={handleAvatarClick}>
-        {userId && <UserAvatar userId={userId} onClick={handleAvatarClick} size={30} />}
-      </div>
+      <Button variant="ghost" size="icon" onClick={() => router.push('/profile')}>
+        <User className="size-6" />
+      </Button>
 
       {/* テンプレート予定 */}
-      <div className="template-section" style={{ marginTop: 'auto' }}>
+      <div className="w-full mt-auto">
         <h4>テンプレート</h4>
-        <button className="template-button">ひま</button>
-        <button className="template-button">買い物</button>
-        <button className="template-button">映画</button>
+        <Button variant="secondary" className="w-full py-1.5 mb-2 text-[13px] bg-[#e0f7ff] hover:bg-[#d2f0fa]">
+          ひま
+        </Button>
+        <Button variant="secondary" className="w-full py-1.5 mb-2 text-[13px] bg-[#e0f7ff] hover:bg-[#d2f0fa]">
+          買い物
+        </Button>
+        <Button variant="secondary" className="w-full py-1.5 mb-2 text-[13px] bg-[#e0f7ff] hover:bg-[#d2f0fa]">
+          映画
+        </Button>
       </div>
     </div>
   );

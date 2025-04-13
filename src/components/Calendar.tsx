@@ -204,26 +204,6 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     }
   }, []);
 
-  const monthStart = startOfMonth(monthList[activeMonthIndex]);
-  const monthEnd = endOfMonth(monthStart);
-
-
-  const isDragSelected = (day: Date) => {
-    if (dragStart && dragEnd) {
-      const start = startOfDay(new Date(dragStart));
-      const end = startOfDay(new Date(dragEnd));
-      const currentDay = startOfDay(day);
-
-      // ドラッグ範囲の日付を全て含む
-      return currentDay >= start && currentDay <= end;
-    }
-    // ドラッグが始まったばかりで終了日が未定の場合でも開始日は選択済みにする
-    if (dragStart && !dragEnd) {
-      return format(day, 'yyyy-MM-dd') === dragStart;
-    }
-    return false;
-  };
-
   const handleMouseDown = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
     setDragStart(dateStr);
@@ -245,11 +225,11 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     const dayElement = document.querySelector(`[data-date="${dragStart}"]`) as HTMLElement;
     if (!dayElement) return;
     const rect = dayElement.getBoundingClientRect();
-    let newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
+    let newPosition = { top: rect.top + window.scrollY + 50, left: rect.right + 100 };
     if (dragStart) {
       const dayOfWeek = new Date(dragStart).getDay();
       if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
-        newPosition = { top: rect.top + window.scrollY, left: rect.left - 300 }; // 左に表示
+        newPosition = { top: rect.top + window.scrollY + 50, left: rect.left - 100 }; // 左に表示
       }
     }
     setModalPosition(newPosition);
@@ -262,10 +242,10 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     const dayElement = document.querySelector(`[data-date="${dateStr}"]`) as HTMLElement;
     if (!dayElement) return;
     const rect = dayElement.getBoundingClientRect();
-    let newPosition = { top: rect.top + window.scrollY, left: rect.right + 10 };
+    let newPosition = { top: rect.top + window.scrollY + 50, left: rect.right + 155 };
     const dayOfWeek = new Date(dateStr).getDay();
     if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
-      newPosition = { top: rect.top + window.scrollY, left: rect.left - 300 }; // 左に表示
+      newPosition = { top: rect.top + window.scrollY + 50, left: rect.left - 155 }; // 左に表示
     }
     setModalPosition(newPosition);
     setClickedDate(dateStr);

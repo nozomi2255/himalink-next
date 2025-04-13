@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
+import { Save, Trash, Check } from "lucide-react";
 
 interface EventDialogProps {
     open: boolean;
@@ -17,6 +18,11 @@ interface EventDialogProps {
     selectedStartDate?: string;
     selectedEndDate?: string;
     modalPosition?: { top: number; left: number };
+}
+
+function formatTime(datetime?: string) {
+    if (!datetime) return "-";
+    return datetime.substring(11, 16); // UTCの "YYYY-MM-DDTHH:mm:ss" から "HH:mm" 抜き出し
 }
 
 export function EventDialog({
@@ -82,34 +88,46 @@ export function EventDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
+            <DialogContent
+                className="w-[30%] max-w-xl"
+                style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
                 <DialogHeader>
-                    <DialogTitle>{entryId ? (isOwner ? "Edit Event" : entry?.title ?? "読み込み中...") : "Add Event"}</DialogTitle>
-                    <DialogDescription>
-                        {entry?.start_time ?? selectedStartDate} - {entry?.end_time ?? selectedEndDate} @{entry?.location ?? "-"}
-                    </DialogDescription>
-                </DialogHeader>
-
-                {isOwner && (
-                    <>
+                    {isOwner && (
+                        <>
+                            <div className="flex justify-end">
+                                {entryId ? (
+                                    <>
+                                        <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                            <Save className="h-4 w-4" />
+                                        </Button>
+                                        <Button onClick={handleDelete} variant="ghost" size="icon">
+                                            <Trash className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button onClick={handleAdd} variant="ghost" size="icon">
+                                        <Check className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </>
+                    )}
+                    <DialogTitle className="flex flex-row gap-2">
                         <Input
                             value={newTitle}
                             onChange={(e) => setNewTitle(e.target.value)}
                             placeholder="イベントタイトルを入力"
-                            className="mb-4"
+                            className="mb-4 w-full"
                         />
-                        <div className="flex justify-end gap-2">
-                            {entryId ? (
-                                <>
-                                    <Button onClick={handleUpdate}>更新</Button>
-                                    <Button onClick={handleDelete} variant="destructive">削除</Button>
-                                </>
-                            ) : (
-                                <Button onClick={handleAdd}>保存</Button>
-                            )}
+                        <div className="text-sm whitespace-pre-line">
+                            {formatTime(entry?.start_time ?? selectedStartDate)} {"\n"} {formatTime(entry?.end_time ?? selectedEndDate)}
                         </div>
-                    </>
-                )}
+                    </DialogTitle>
+                    <DialogDescription>
+
+                    </DialogDescription>
+                </DialogHeader>
+
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
                     <div className="flex gap-2">
