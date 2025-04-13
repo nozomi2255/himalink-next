@@ -288,7 +288,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
         )}
       </div>
       /* 3. 固定ヘッダー部 */
-      <div className="sticky top-0 z-[100] bg-white border-b border-gray-300 shadow-sm p-2">
+      <div className="sticky top-0 z-[50] bg-white border-b border-gray-300 shadow-sm p-2">
         <div className={`transition-opacity transition-transform duration-300 ${animatingHeader ? (scrollDirection === 'up' ? 'opacity-0 -translate-y-5' : 'opacity-0 translate-y-5') : ''}`}>
           <h2 className="text-xl font-bold m-0">{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
         </div>
@@ -312,11 +312,10 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
               onMouseEnter={() => handleMouseEnter(day)}
               onMouseUp={handleMouseUp}
               onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
-              className={`relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start border transition-colors duration-200 ease-in-out ${
-                isCurrentMonth
+              className={`relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start border transition-colors duration-200 ease-in-out ${isCurrentMonth
                   ? 'bg-white border-gray-300 hover:bg-blue-50 animate-fadeIn'
                   : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
-              }`}
+                }`}
             >
               <div
                 className={`absolute top-1 left-1 font-bold ${isSameMonth(day, currentDate) ? 'text-black opacity-100' : 'text-gray-500 opacity-30'
@@ -327,7 +326,7 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
               {/* イベントの表示コンテナ（絶対位置） */}
               <div className="absolute z-10 w-full box-border rounded-lg">
                 {clickedDate === format(day, "yyyy-MM-dd") && (
-                  <div className="bg-blue-200 italic shadow-md rounded-lg animate-fadeIn px-1 py-0.5">
+                  <div className="text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100]">
                     New Event
                   </div>
                 )}
@@ -344,6 +343,8 @@ const Calendar: React.FC<CalendarProps> = ({ events, editable, selectable, dateC
                       key={event.id}
                       className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5"
                       onClick={(e) => {
+                        setBarStyle(null); //barstyleをリセット
+                        setClickedDate(null); //clickedDateをリセット
                         e.stopPropagation();
                         eventClick && eventClick({ event: { id: event.id, title: event.title } });
                       }}

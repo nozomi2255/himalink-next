@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Calendar from "./Calendar";
 import { Event } from '../app/types';
-import EventFormModal from "./EventFormModal";
 import { createClient } from "@/utils/supabase/client";
-import { EventDetailDialog } from "./EventDetailDialog";
+import { EventDialog } from "@/components/EventDialog"
 
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
-  currentUserId: string; 
+  currentUserId: string;
 }
 
 export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
@@ -47,8 +46,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   }, [userId]); // userIdが変更されたときにも再取得
 
   // EventFormModal の表示状態を管理（初期状態は非表示）
-  const [isEventFormModalOpen, setIsEventFormModalOpen] = useState(false);
-  const [showDetailDialog, setShowDetailDialog] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedEventTitle, setSelectedEventTitle] = useState<string>("");
@@ -60,73 +58,57 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     setSelectedDate(dateStr);
     setSelectedEventId(""); // 追加の場合はイベントIDは空にする
     setSelectedEventTitle(""); // 追加の場合はタイトルは空にする
-    setIsEventFormModalOpen(true);
+    setDialogOpen(true);
   };
 
   // イベントがクリックされたときの処理
   const handleEventClick = (arg: { event: { id: string, title: string } }) => {
+    setSelectedDate(""); // ← これ追加
+    setSelectedRange(null); // ← これも
     setSelectedEventId(arg.event.id);
     setSelectedEventTitle(arg.event.title); // クリックされたイベントのタイトルを設定
-    if (isOwner) {
-      setIsEventFormModalOpen(true);
-    } else {
-      setShowDetailDialog(true);
-    }
+    setDialogOpen(true);
+    console.log("isOwner:", isOwner)
   };
-  
+
   // モーダルを閉じる処理
   const handleCloseEventFormModal: () => void = () => {
     console.log("handleCloseEventFormModal called");
     fetchEvents(); // モーダルを閉じる際に最新のイベントを取得
-    setIsEventFormModalOpen(false);
+    setDialogOpen(false);
     setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
   };
 
   const handleDragDateChange = ({ startDate, endDate }: { startDate: string; endDate: string }) => {
     setSelectedRange({ startDate, endDate });
-    setIsEventFormModalOpen(true);
+    setDialogOpen(true);
   };
-
-  useEffect(() => {
-    if (!isEventFormModalOpen) {
-      fetchEvents(); // モーダルが閉じられたときにイベントを再フェッチ
-    }
-  }, [isEventFormModalOpen]);
 
   return (
     <div className="w-full h-screen flex justify-center items-center">
-      <Calendar 
-        events={events} 
-        editable={true} 
-        selectable={true} 
+      <Calendar
+        events={events}
+        editable={true}
+        selectable={true}
         dateClick={(arg) => handleDateClick(arg.dateStr)}
         eventClick={handleEventClick}
         dragDateChange={isOwner ? handleDragDateChange : undefined}
-        modalOpen={isEventFormModalOpen}
+        modalOpen={dialogOpen}
         modalPosition={modalPosition}
         setModalPosition={setModalPosition}
       />
-      
-      {isOwner ? (
-        isEventFormModalOpen && (
-          <EventFormModal
-            selectedStartDate={selectedRange?.startDate || ""}
-            selectedEndDate={selectedRange?.endDate || ""}
-            selectedEventId={selectedEventId}
-            selectedEventTitle={selectedEventTitle}
-            modalPosition={modalPosition}
-            onClose={handleCloseEventFormModal}
-          />
-        )
-      ) : (
-        showDetailDialog && (
-          <EventDetailDialog
-            entryId={selectedEventId}
-            currentUserId={currentUserId}
-            open={showDetailDialog}
-            onOpenChange={setShowDetailDialog}
-          />
-        )
+
+      {dialogOpen && (
+        <EventDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          isOwner={isOwner}
+          entryId={selectedEventId}
+          currentUserId={currentUserId}
+          selectedStartDate={selectedRange?.startDate || ""}
+          selectedEndDate={selectedRange?.endDate || ""}
+          modalPosition={modalPosition}
+        />
       )}
     </div>
   );
