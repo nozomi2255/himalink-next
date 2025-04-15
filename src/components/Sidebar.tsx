@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 import { createClient } from '@/utils/supabase/client';
 import { Button } from "@/components/ui/button";
 import React from "react";
-import "./Sidebar.css"; // スタイルは別ファイルで定義（後述）
 
 const Sidebar = () => {
   const [userId, setUserId] = useState<string | null>(null);
