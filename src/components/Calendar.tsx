@@ -6,13 +6,9 @@ import {
 } from "date-fns";
 import { Event } from "../app/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import ReactDOM from 'react-dom/client';
 
-// TODO: デフォルトイベントコンテナを列を跨ぐ場合も表示できるようにする。
-// TODO: 現在、ドラッグで、前の日付に戻る場合はデフォルトイベントコンテナを適用できないことを改善する。
 // TODO: DBから取得したイベントコンテナに関しても、複数日の予定は、連なったイベントコンテナを表示するようにする。
 // TODO: 月遷移のスクロールに関して、週単位か、月単位のスクロールしかできないように制限する。微妙なスクロールはできないようにする.
-// TODO: イベント編集モーダルを閉じた後に、イベントが初期化されない問題を改善する。
 // TODO: ドラッグ時のモーダルポジションを修正する。
 
 
