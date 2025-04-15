@@ -6,6 +6,7 @@ import {
 } from "date-fns";
 import { Event } from "../app/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import ReactDOM from 'react-dom/client';
 
 // TODO: デフォルトイベントコンテナを列を跨ぐ場合も表示できるようにする。
 // TODO: 現在、ドラッグで、前の日付に戻る場合はデフォルトイベントコンテナを適用できないことを改善する。
@@ -27,6 +28,12 @@ interface CalendarProps {
   modalOpen?: boolean;
   modalPosition: { top: number; left: number };
   setModalPosition: React.Dispatch<React.SetStateAction<{ top: number; left: number }>>;
+}
+
+interface BarStyle {
+  top: string;
+  left: string;
+  width: string;
 }
 
 const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
@@ -70,7 +77,7 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
   const weeks = getWeeksBetween(monthList);
   const [animatingHeader, setAnimatingHeader] = useState(false);
   const [selectedRange, setSelectedRange] = useState<{ start: string; end: string } | null>(null);
-  const [barStyle, setBarStyle] = useState<React.CSSProperties | null>(null);
+  const [barStyles, setBarStyles] = useState<BarStyle[]>([]);
 
   useLayoutEffect(() => {
     if ((!selectedRange && !dragStart) || !calendarRef.current || clickedDate) return;
@@ -93,27 +100,45 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
 
     if (allDays.length === 0) return;
 
-    const firstDayEl = document.querySelector(`[data-date="${format(allDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
-    const lastDayEl = document.querySelector(`[data-date="${format(allDays[allDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
+    // 週ごとにグループ化
+    const weekGroups: Date[][] = [];
+    let currentWeek: Date[] = [];
+    
+    allDays.forEach((day, index) => {
+      if (currentWeek.length === 0 || day.getDay() > currentWeek[currentWeek.length - 1].getDay()) {
+        currentWeek.push(day);
+      } else {
+        weekGroups.push(currentWeek);
+        currentWeek = [day];
+      }
+      
+      if (index === allDays.length - 1) {
+        weekGroups.push(currentWeek);
+      }
+    });
 
-    if (!firstDayEl || !lastDayEl) return;
+    // 各週のバーのスタイルを計算
+    const newBarStyles = weekGroups.map(weekDays => {
+      const firstDayEl = document.querySelector(`[data-date="${format(weekDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
+      const lastDayEl = document.querySelector(`[data-date="${format(weekDays[weekDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
 
-    const startTop = firstDayEl.offsetTop;
-    const startLeft = firstDayEl.offsetLeft;
-    const endRight = lastDayEl.offsetLeft + lastDayEl.offsetWidth;
+      if (!firstDayEl || !lastDayEl) return null;
 
-    const top = startTop + 24;
-    const left = Math.min(startLeft, endRight - lastDayEl.offsetWidth);
-    const width = Math.abs(endRight - startLeft);
+      return {
+        top: `${firstDayEl.offsetTop + 24}px`,
+        left: `${firstDayEl.offsetLeft}px`,
+        width: `${(lastDayEl.offsetLeft + lastDayEl.offsetWidth) - firstDayEl.offsetLeft}px`
+      };
+    }).filter((style): style is BarStyle => style !== null);
 
-    setBarStyle({ top: `${top}px`, left: `${left}px`, width: `${width}px` });
+    setBarStyles(newBarStyles);
   }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
 
   useEffect(() => {
     if (!modalOpen) {
       setSelectedRange(null);
       setClickedDate(null);
-      setBarStyle(null);
+      setBarStyles([]);
     }
   }, [modalOpen]);
 
@@ -270,18 +295,15 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     <div className="relative h-full w-full overflow-y-auto overflow-x-hidden" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
       /* 2. 複数日イベントレイヤー */
       <div className="absolute inset-0 pointer-events-none z-50">
-        {(barStyle && !clickedDate) && (
+        {barStyles.map((style, index) => (
           <div
-            className={`absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] animate-fadeIn ${dragStart ? 'pointer-events-none' : 'pointer-events-auto'}`}
-            style={barStyle}
-            onClick={(e) => {
-              e.stopPropagation();
-              console.log("Event bar clicked");
-            }}
+            key={index}
+            className="absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] animate-fadeIn pointer-events-none"
+            style={style}
           >
             New Event
           </div>
-        )}
+        ))}
       </div>
       /* 3. 固定ヘッダー部 */
       <div className="sticky top-0 z-[50] bg-white border-b border-gray-300 shadow-sm p-2">
@@ -346,7 +368,7 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
                       key={event.id}
                       className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5"
                       onClick={(e) => {
-                        setBarStyle(null); //barstyleをリセット
+                        setBarStyles([]); //barstyleをリセット
                         setClickedDate(null); //clickedDateをリセット
                         e.stopPropagation();
                         eventClick && eventClick({ event: { id: event.id, title: event.title } });
