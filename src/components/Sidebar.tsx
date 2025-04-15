@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from "next/navigation";
-import { CalendarDays, User } from "lucide-react"
+import { CalendarDays, User, GalleryVerticalEnd } from "lucide-react"
 import { useEffect, useState } from "react";
 import { createClient } from '@/utils/supabase/client';
 import { Button } from "@/components/ui/button";
@@ -34,10 +34,15 @@ const Sidebar = () => {
   }, []);
 
   return (
-    <div className="w-[180px] bg-[#f8faff] p-5 gap-2 flex flex-col items-center border-r border-[#ddd] h-screen">
+    <div className="w-[180px] bg-[#f8faff] p-5 gap-5 flex flex-col items-center border-r border-[#ddd] h-screen">
       {/* ホーム画面への遷移ボタン */}
       <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
         <CalendarDays className="size-6" />
+      </Button>
+
+      {/* タイムライン画面への遷移ボタン */}
+      <Button variant="ghost" size="icon" onClick={() => router.push('/timeline')}>
+        <GalleryVerticalEnd className="size-6" />
       </Button>
 
       {/* プロフィールアイコン */}

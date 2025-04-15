@@ -74,6 +74,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     if(!dialogOpen) {
       setSelectedEventId("");
       setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
+      fetchEvents();
     }
   }, [dialogOpen]); // userIdが変更されたときにも再取得
 

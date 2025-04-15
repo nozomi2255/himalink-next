@@ -83,9 +83,12 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     const start = startOfDay(new Date(startDate));
     const end = startOfDay(new Date(endDate));
 
+    // 日付の順序を正規化
+    const [earlierDate, laterDate] = [start, end].sort((a, b) => a.getTime() - b.getTime());
+
     const allDays = weeks.flat().filter(day => {
       const current = startOfDay(day);
-      return current >= start && current <= end;
+      return current >= earlierDate && current <= laterDate;
     });
 
     if (allDays.length === 0) return;
@@ -99,9 +102,9 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     const startLeft = firstDayEl.offsetLeft;
     const endRight = lastDayEl.offsetLeft + lastDayEl.offsetWidth;
 
-    const top = startTop + 24; // match .day-number top margin
-    const left = startLeft;
-    const width = endRight - startLeft;
+    const top = startTop + 24;
+    const left = Math.min(startLeft, endRight - lastDayEl.offsetWidth);
+    const width = Math.abs(endRight - startLeft);
 
     setBarStyle({ top: `${top}px`, left: `${left}px`, width: `${width}px` });
   }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
@@ -219,8 +222,18 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
 
   const handleMouseUp = () => {
     if (dragStart && dragEnd && dragDateChange) {
-      dragDateChange({ startDate: dragStart, endDate: dragEnd });
-      setSelectedRange({ start: dragStart, end: dragEnd }); // ←追加
+      const start = new Date(dragStart);
+      const end = new Date(dragEnd);
+      // 日付の順序を正規化
+      const [earlierDate, laterDate] = [start, end].sort((a, b) => a.getTime() - b.getTime());
+      dragDateChange({ 
+        startDate: format(earlierDate, "yyyy-MM-dd"), 
+        endDate: format(laterDate, "yyyy-MM-dd") 
+      });
+      setSelectedRange({ 
+        start: format(earlierDate, "yyyy-MM-dd"), 
+        end: format(laterDate, "yyyy-MM-dd") 
+      });
     }
     const dayElement = document.querySelector(`[data-date="${dragStart}"]`) as HTMLElement;
     if (!dayElement) return;
@@ -256,7 +269,7 @@ const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editab
     /* 1. カレンダー全体のコンテナ */
     <div className="relative h-full w-full overflow-y-auto overflow-x-hidden" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
       /* 2. 複数日イベントレイヤー */
-      <div className="absolute inset-0 pointer-events-none z-[1000]">
+      <div className="absolute inset-0 pointer-events-none z-50">
         {(barStyle && !clickedDate) && (
           <div
             className={`absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] animate-fadeIn ${dragStart ? 'pointer-events-none' : 'pointer-events-auto'}`}
