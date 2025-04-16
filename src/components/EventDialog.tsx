@@ -6,6 +6,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ja } from "date-fns/locale";
+import { CalendarIcon, Clock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check } from "lucide-react";
 
@@ -13,7 +21,7 @@ interface EventDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     entryId?: string;
-    currentUserId: string;
+    targetUserId?: string;
     isOwner: boolean;
     selectedStartDate?: string;
     selectedEndDate?: string;
@@ -29,7 +37,7 @@ export function EventDialog({
     open,
     onOpenChange,
     entryId,
-    currentUserId,
+    targetUserId,
     isOwner,
     selectedStartDate,
     selectedEndDate,
@@ -40,6 +48,15 @@ export function EventDialog({
     const [reactions, setReactions] = useState<Record<string, number>>({});
     const [commentText, setCommentText] = useState("");
     const [newTitle, setNewTitle] = useState("");
+    const [isAllDay, setIsAllDay] = useState(true);
+    const [startDate, setStartDate] = useState<Date | undefined>(
+        selectedStartDate ? new Date(selectedStartDate) : undefined
+    );
+    const [endDate, setEndDate] = useState<Date | undefined>(
+        selectedEndDate ? new Date(selectedEndDate) : undefined
+    );
+    const [startTime, setStartTime] = useState("00:00");
+    const [endTime, setEndTime] = useState("00:00");
 
     const supabase = createClient();
 
@@ -49,47 +66,83 @@ export function EventDialog({
             const { data: entryData } = await supabase.rpc("get_entry_with_details", { p_entry_id: entryId });
             const { data: commentData } = await supabase.rpc("get_entry_comments", { p_entry_id: entryId });
             const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
-            setEntry(entryData?.[0] ?? null);
-            setNewTitle(entryData?.[0]?.title ?? "");
+            const entry = entryData?.[0] ?? null;
+            setEntry(entry);
+            setNewTitle(entry?.title ?? "");
+            setIsAllDay(entry?.is_all_day ?? true);
+            if (entry?.start_time) {
+                const start = new Date(entry.start_time);
+                setStartDate(start);
+                setStartTime(format(start, "HH:mm"));
+            }
+            if (entry?.end_time) {
+                const end = new Date(entry.end_time);
+                setEndDate(end);
+                setEndTime(format(end, "HH:mm"));
+            }
             setComments(commentData ?? []);
             setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
         };
         fetchData();
     }, [entryId, open]);
 
+    const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
+        if (!date) return undefined;
+        const [hours, minutes] = time.split(":");
+        const newDate = new Date(date);
+        newDate.setHours(parseInt(hours), parseInt(minutes));
+        return newDate.toISOString();
+    };
+
     const handleAdd = async () => {
-        await fetch("/api/event", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title: newTitle,
-                start_time: selectedStartDate,
-                end_time: selectedEndDate,
-                is_all_day: true,
-                entry_type: "event",
-            }),
+        const { error } = await supabase.rpc('insert_entry', {
+            p_user_id: targetUserId,
+            p_title: newTitle,
+            p_start_time: combineDateTime(startDate, startTime),
+            p_end_time: combineDateTime(endDate, endTime),
+            p_is_all_day: isAllDay,
+            p_entry_type: "event",
         });
-        onOpenChange(false);
+    
+        if (error) {
+            console.error('RPC insert_entry error:', error);
+        } else {
+            onOpenChange(false);
+        }
     };
 
     const handleUpdate = async () => {
-        await fetch(`/api/event?eventId=${entryId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: newTitle }),
+        const { error } = await supabase.rpc('update_entry', {
+            p_id: entryId,
+            p_title: newTitle,
+            p_start_time: combineDateTime(startDate, startTime),
+            p_end_time: combineDateTime(endDate, endTime),
+            p_is_all_day: isAllDay,
         });
-        onOpenChange(false);
+    
+        if (error) {
+            console.error('RPC update_entry error:', error);
+        } else {
+            onOpenChange(false);
+        }
     };
 
     const handleDelete = async () => {
-        await fetch(`/api/event?eventId=${entryId}`, { method: "DELETE" });
-        onOpenChange(false);
+        const { error } = await supabase.rpc('delete_entry', {
+            p_id: entryId,
+        });
+    
+        if (error) {
+            console.error('RPC delete_entry error:', error);
+        } else {
+            onOpenChange(false);
+        }
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="w-[30%] max-w-xl"
+                className="w-[25%] max-w-xl"
                 style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
                 <DialogHeader>
                     {isOwner && (
@@ -112,20 +165,88 @@ export function EventDialog({
                             </div>
                         </>
                     )}
-                    <DialogTitle className="flex flex-row gap-2">
+                    <DialogTitle className="flex flex-col gap-2">
                         <Input
                             value={newTitle}
                             onChange={(e) => setNewTitle(e.target.value)}
                             placeholder="イベントタイトルを入力"
-                            className="mb-4 w-full"
+                            className="w-full"
                         />
-                        <div className="text-sm whitespace-pre-line">
-                            {formatTime(entry?.start_time ?? selectedStartDate)} {"\n"} {formatTime(entry?.end_time ?? selectedEndDate)}
+                        <div className="flex flex-col gap-2">
+                            <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-[100px] justify-start text-left font-normal",
+                                                !startDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={startDate}
+                                            onSelect={setStartDate}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {!isAllDay && (
+                                    <Input
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        className="w-[120px]"
+                                    />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant={"outline"}
+                                            className={cn(
+                                                "w-[100px] justify-start text-left font-normal",
+                                                !endDate && "text-muted-foreground"
+                                            )}
+                                        >
+                                            {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0">
+                                        <Calendar
+                                            mode="single"
+                                            selected={endDate}
+                                            onSelect={setEndDate}
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                {!isAllDay && (
+                                    <Input
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        className="w-[120px]"
+                                    />
+                                )}
+                            </div>
                         </div>
                     </DialogTitle>
                     <DialogDescription>
-
                     </DialogDescription>
+                    <div className="flex items-center space-x-2 mt-2">
+                        <Switch
+                            id="all-day"
+                            checked={isAllDay}
+                            onCheckedChange={setIsAllDay}
+                        />
+                        <Label htmlFor="all-day">終日</Label>
+                    </div>
                 </DialogHeader>
 
                 <div className="space-y-4">

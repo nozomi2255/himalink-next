@@ -123,7 +123,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           onOpenChange={setDialogOpen}
           isOwner={isOwner}
           entryId={selectedEventId}
-          currentUserId={currentUserId}
+          targetUserId={userId}
           selectedStartDate={selectedRange?.startDate || ""}
           selectedEndDate={selectedRange?.endDate || ""}
           modalPosition={modalPosition}
