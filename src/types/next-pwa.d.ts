@@ -1,19 +1,6 @@
 declare module 'next-pwa' {
   import type { NextConfig } from 'next'
 
-  interface RuntimeCachingOptions {
-    cacheName?: string;
-    networkTimeoutSeconds?: number;
-    expiration?: {
-      maxEntries?: number;
-      maxAgeSeconds?: number;
-    };
-    cacheableResponse?: {
-      statuses?: number[];
-      headers?: Record<string, string>;
-    };
-  }
-
   interface PWAConfig {
     dest?: string
     disable?: boolean
@@ -23,8 +10,8 @@ declare module 'next-pwa' {
     skipWaiting?: boolean
     runtimeCaching?: Array<{
       urlPattern: RegExp | string
-      handler: 'CacheFirst' | 'NetworkFirst' | 'NetworkOnly' | 'StaleWhileRevalidate'
-      options?: RuntimeCachingOptions
+      handler: string
+      options?: Record<string, any>
     }>
   }
 

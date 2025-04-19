@@ -15,15 +15,15 @@ export default function LoginModal({ onClose }: LoginModalProps) {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [user, setUser] = useState<any>(null); // ユーザー情報を格納するステート
+
   useEffect(() => {
     const supabase = createClient();
 
     // 現在のユーザー情報を取得
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        setEmail(data.user.user_metadata.email);
-        setPassword(data.user.user_metadata.password);
-        setShowPassword(true);
+        setUser(data.user);
       }
     });
   }, []);

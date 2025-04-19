@@ -23,6 +23,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    <html lang="ja">
+      <head>
+        <style data-fullcalendar></style>
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
         <div className="relative min-h-screen p-0 bg-blue-50">
           <div className="mt-0 flex">
             <div className="flex-1">
@@ -30,5 +37,7 @@ export default function RootLayout({
             </div>
           </div>
         </div>
+      </body>
+    </html>
   );
 }
