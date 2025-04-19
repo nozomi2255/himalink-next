@@ -23,11 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja">
-      <head>
-        <style data-fullcalendar></style>
-      </head>
-      <body
+      <div
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <div className="relative min-h-screen p-0 bg-blue-50">
@@ -37,7 +33,6 @@ export default function RootLayout({
             </div>
           </div>
         </div>
-      </body>
-    </html>
+      </div>
   );
 }
