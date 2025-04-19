@@ -1,6 +1,6 @@
 // src/app/page.tsx
 import React from 'react';
-import CalendarView from "@/components/CalendarView";
+import CalendarView from "@/components/calendar-view";
 import { getAuthenticatedUser } from "@/app/actions";
 
 // このページはサーバーコンポーネントとして実行されます

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Calendar from "./Calendar";
+import Calendar from "./main-calendar";
 import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
-import { EventDialog } from "@/components/EventDialog"
+import { EventDialog } from "@/components/event-dialog"
 
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得

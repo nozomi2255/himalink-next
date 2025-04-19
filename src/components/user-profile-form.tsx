@@ -3,9 +3,9 @@
 
 import React, { useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import UserAvatar from "./UserAvatar"; // UserAvatarをインポート
-import FollowingModal from "./FollowingModal";
-import FollowersModal from "./FollowersModal";
+import UserAvatar from "./user-avatar"; // UserAvatarをインポート
+import FollowingModal from "./following-modal";
+import FollowersModal from "./followers-modal";
 import type { UserRecord } from "@/app/types";
 import { useRouter } from "next/navigation";
 
