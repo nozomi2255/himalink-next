@@ -63,7 +63,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
   }, [userId]);
 
   return (
-    <div className="w-[200px] p-4 border-l border-gray-200 bg-gray-50 flex flex-col gap-4">
+    <div className="w-[200px] p-4 border-l border-gray-200 bg-gray-50 flex flex-col gap-4 hidden md:block">
       <div className="flex items-center gap-2 bg-white p-2 rounded shadow-sm">
         <input
           type="text"

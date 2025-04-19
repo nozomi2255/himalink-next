@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Calendar from "./main-calendar";
+import MainCalendar from "./main-calendar";
 import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
@@ -103,9 +103,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
 
   return (
     <div className="w-full h-screen flex justify-center items-center">
-      <Calendar
-        avatarUrl={avatarUrl}
-        username={username}
+      <MainCalendar
         events={events}
         editable={true}
         selectable={true}

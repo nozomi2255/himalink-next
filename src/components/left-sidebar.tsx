@@ -4,10 +4,10 @@ import { NavButtons } from "@/components/navi-items";
 import { Button } from "@/components/ui/button";
 
 const Sidebar: React.FC = () => (
-  <aside className="hidden md:flex flex-col w-[180px] bg-[#f8faff] p-5 gap-5 items-center border-r h-screen">
+  <aside className="hidden md:flex flex-col w-[180px] bg-[#f8faff] p-5 border-r h-screen">
     <NavButtons />
 
-    <div className="w-full mt-auto">
+    <div className="w-full mt-auto justify-center">
       <h4 className="mb-2">テンプレート</h4>
       {["ひま", "買い物", "映画"].map((t) => (
         <Button
