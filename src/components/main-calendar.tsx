@@ -6,15 +6,15 @@ import {
 } from "date-fns";
 import { Event } from "../app/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useCalendar } from "@/contexts/calendar-context";
-import { CalendarHeader } from "./calendar-header";
 
 // TODO: DBから取得したイベントコンテナに関しても、複数日の予定は、連なったイベントコンテナを表示するようにする。
 // TODO: 月遷移のスクロールに関して、週単位か、月単位のスクロールしかできないように制限する。微妙なスクロールはできないようにする.
 // TODO: ドラッグ時のモーダルポジションを修正する。
 
 
-interface MainCalendarProps {
+interface CalendarProps {
+  avatarUrl: string | null;
+  username: string;
   events: Event[];
   editable?: boolean;
   selectable?: boolean;
@@ -32,18 +32,7 @@ interface BarStyle {
   width: string;
 }
 
-const MainCalendar: React.FC<MainCalendarProps> = ({ 
-  events, 
-  editable, 
-  selectable, 
-  dateClick, 
-  eventClick, 
-  dragDateChange, 
-  modalOpen, 
-  modalPosition, 
-  setModalPosition 
-}) => {
-  const { currentMonth, setCurrentMonth } = useCalendar();
+const Calendar: React.FC<CalendarProps> = ({ avatarUrl, username, events, editable, selectable, dateClick, eventClick, dragDateChange, modalOpen, modalPosition, setModalPosition }) => {
 
   const getWeeksBetween = (months: Date[]): Date[][] => {
     const first = startOfWeek(startOfMonth(months[0]));
@@ -110,7 +99,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     // 週ごとにグループ化
     const weekGroups: Date[][] = [];
     let currentWeek: Date[] = [];
-
+    
     allDays.forEach((day, index) => {
       if (currentWeek.length === 0 || day.getDay() > currentWeek[currentWeek.length - 1].getDay()) {
         currentWeek.push(day);
@@ -118,7 +107,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
         weekGroups.push(currentWeek);
         currentWeek = [day];
       }
-
+      
       if (index === allDays.length - 1) {
         weekGroups.push(currentWeek);
       }
@@ -213,7 +202,6 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           visibleMonthRef.current = newMonth;
           setVisibleMonth(newMonth);
           setCurrentDate(closestDate);
-          setCurrentMonth(newMonth);
           setAnimatingHeader(true);
           setTimeout(() => {
             setAnimatingHeader(false);
@@ -224,7 +212,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
 
     container.addEventListener("scroll", handleScroll);
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [monthList, setCurrentMonth]);
+  }, [monthList]);
 
   useEffect(() => {
     const container = calendarRef.current;
@@ -259,13 +247,13 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
       const end = new Date(dragEnd);
       // 日付の順序を正規化
       const [earlierDate, laterDate] = [start, end].sort((a, b) => a.getTime() - b.getTime());
-      dragDateChange({
-        startDate: format(earlierDate, "yyyy-MM-dd"),
-        endDate: format(laterDate, "yyyy-MM-dd")
+      dragDateChange({ 
+        startDate: format(earlierDate, "yyyy-MM-dd"), 
+        endDate: format(laterDate, "yyyy-MM-dd") 
       });
-      setSelectedRange({
-        start: format(earlierDate, "yyyy-MM-dd"),
-        end: format(laterDate, "yyyy-MM-dd")
+      setSelectedRange({ 
+        start: format(earlierDate, "yyyy-MM-dd"), 
+        end: format(laterDate, "yyyy-MM-dd") 
       });
     }
     const dayElement = document.querySelector(`[data-date="${dragStart}"]`) as HTMLElement;
@@ -298,8 +286,6 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     dateClick && dateClick({ dateStr });
   };
 
-  const days = weeks.flat();
-
   return (
     /* 1. カレンダー全体のコンテナ */
     <div className="relative h-full w-full overflow-y-auto overflow-x-hidden" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
@@ -315,44 +301,29 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           </div>
         ))}
       </div>
-      <CalendarHeader
-        animatingHeader={animatingHeader}
-        scrollDirection={scrollDirection}
-      />
+      /* 3. 固定ヘッダー部 */
+      <div className="sticky top-0 z-[50] bg-white border-b border-gray-300 shadow-sm p-2">
+        <div className="flex items-center justify-between px-2">
+          <div className={`transition-opacity transition-transform duration-300 ${animatingHeader ? (scrollDirection === 'up' ? 'opacity-0 -translate-y-5' : 'opacity-0 translate-y-5') : ''}`}>
+            <h2 className="text-xl font-bold m-0">{format(currentDate ?? new Date(), "MMMM yyyy")}</h2>
+          </div>
+          {/* アバター配置 */}
+          <Avatar>
+            <AvatarImage src={avatarUrl || "/default-avatar.png"} alt={username} />
+            <AvatarFallback>{username?.charAt(0) || "U"}</AvatarFallback>
+          </Avatar>
+        </div>
+        <div className="flex justify-between px-2 bg-gray-100 font-bold border-b border-gray-200">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, idx) => (
+            <div key={idx} className="w-1/7 text-center py-2">{day}</div>
+          ))}
+        </div>
+      </div>
 
       /* 4. カレンダー日付グリッド */
       <div className="grid grid-cols-7 w-full max-w-full box-border">
-        {days.map((day, index) => {
+        {weeks.flat().map((day, index) => {
           const isCurrentMonth = isSameMonth(day, currentDate);
-          const thisMonth = format(day, "yyyy-MM");
-          const colIndex = index % 7; // 0=日曜 ... 6=土曜
-          const isLastCol = colIndex === 6;
-          const right = days[index + 1];
-          const below = days[index + 7];
-          const isVBoundary = right && format(right, "yyyy-MM") !== thisMonth;
-          const isHBoundary = below && format(below, "yyyy-MM") !== thisMonth;
-
-          // 各方向の枠線スタイル
-          const borderTop    = "border-t border-gray-200";
-          const borderLeft   = "border-l border-gray-200";
-          const borderRight  = isVBoundary && !isLastCol ? "border-r-2 border-r-gray-400" : "border-r border-gray-200";
-          const borderBottom = isHBoundary ? "border-b-2 border-b-gray-400" : "border-b border-gray-200";
-
-          const cellClasses = [
-            "relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start",
-            "transition-colors duration-200 ease-in-out",
-            // 四方向の枠線を個別指定
-            borderTop,
-            borderLeft,
-            borderRight,
-            borderBottom,
-            // 当月 vs 他月 背景・文字色
-            isCurrentMonth
-              ? "bg-white hover:bg-gray-100"
-              : "bg-white text-gray-500 hover:bg-gray-100",
-          ]
-            .filter(Boolean)
-            .join(" ");
 
           return (
             <div
@@ -362,9 +333,15 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
               onMouseEnter={() => handleMouseEnter(day)}
               onMouseUp={handleMouseUp}
               onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
-              className={cellClasses}
+              className={`relative min-h-[120px] pt-6 pb-1 box-border flex flex-col items-start border transition-colors duration-200 ease-in-out ${isCurrentMonth
+                ? 'bg-white border-gray-300 hover:bg-blue-50 animate-fadeIn'
+                : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
+                }`}
             >
-              <div className={`absolute top-1 left-1 font-bold ${isCurrentMonth ? 'text-black' : 'text-gray-500 opacity-30'}`}>
+              <div
+                className={`absolute top-1 left-1 font-bold ${isSameMonth(day, currentDate) ? 'text-black opacity-100' : 'text-gray-500 opacity-30'
+                  }`}
+              >
                 {format(day, "d")}
               </div>
               {/* イベントの表示コンテナ（絶対位置） */}
@@ -405,4 +382,4 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
   );
 };
 
-export default MainCalendar;
+export default Calendar;
