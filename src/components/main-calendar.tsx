@@ -79,7 +79,6 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     addMonths(currentDate, i - 6)
   );
   const [monthList, setMonthList] = useState<Date[]>(initialMonthList);
-  const [activeMonthIndex, setActiveMonthIndex] = useState(6);
   const calendarRef = useRef<HTMLDivElement>(null);
   const weeks = getWeeksBetween(monthList);
   const [animatingHeader, setAnimatingHeader] = useState(false);

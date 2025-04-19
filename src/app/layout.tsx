@@ -1,5 +1,4 @@
 import { Metadata } from 'next'
-import { CalendarProvider } from '@/contexts/calendar-context'
 
 export const metadata: Metadata = {
   title: 'Himalink Calendar',
@@ -32,9 +31,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
       <body>
-        <CalendarProvider>
-          {children}
-        </CalendarProvider>
+        {children}
       </body>
     </html>
   );

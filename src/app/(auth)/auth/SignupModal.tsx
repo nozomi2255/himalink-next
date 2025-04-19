@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { signup } from "./actions"; // サインアップ処理をインポート
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"; // アイコンをインポート
 import { createClient } from "@/utils/supabase/client"; // Supabaseクライアントをインポート
+import { useCalendar } from "@/contexts/calendar-context";
 
 // onClose プロパティの型を定義
 interface SignupModalProps {
@@ -15,7 +16,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [user, setUser] = useState<any>(null); // ユーザー情報を格納するステート
+  const { setUserId, setAvatarUrl, setUsername } = useCalendar();
 
   useEffect(() => {
     const supabase = createClient();
@@ -23,10 +24,12 @@ export default function SignupModal({ onClose }: SignupModalProps) {
     // 現在のユーザー情報を取得
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
-        setUser(data.user);
+        setUserId(data.user.id);
+        setAvatarUrl(data.user.user_metadata.avatar_url);
+        setUsername(data.user.user_metadata.username);
       }
     });
-  }, []);
+  }, [setUserId, setAvatarUrl, setUsername]);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();

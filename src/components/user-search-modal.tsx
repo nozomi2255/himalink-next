@@ -23,12 +23,6 @@ export default function UserSearchModal({
     // 検索APIの呼び出しなどのロジックをここに実装
   };
 
-  // 内部でモーダルのクローズ処理を定義
-  const handleClose = () => {
-    console.log("モーダルを閉じる処理を実行");
-    // モーダルの表示状態を更新する処理をここに実装
-  };
-
   // 内部でユーザークリック時の処理を定義
   const handleUserClick = (userId: string) => {
     console.log("ユーザーがクリックされました:", userId);
