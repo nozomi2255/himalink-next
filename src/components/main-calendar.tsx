@@ -75,11 +75,11 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
   const [dragEnd, setDragEnd] = useState<string | null>(null);
   const [clickedDate, setClickedDate] = useState<string | null>(null);
   const [scrollDirection, setScrollDirection] = useState<"up" | "down">("down");
-  const initialMonthList = Array.from({ length: 13 }, (_, i) =>
-    addMonths(currentDate, i - 6)
+  const initialMonthList = Array.from({ length: 5 }, (_, i) =>
+    addMonths(currentDate, i - 2)
   );
   const [monthList, setMonthList] = useState<Date[]>(initialMonthList);
-  const [activeMonthIndex, setActiveMonthIndex] = useState(6);
+  const [activeMonthIndex, setActiveMonthIndex] = useState(1);
   const calendarRef = useRef<HTMLDivElement>(null);
   const weeks = getWeeksBetween(monthList);
   const [animatingHeader, setAnimatingHeader] = useState(false);

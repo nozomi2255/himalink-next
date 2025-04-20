@@ -14,7 +14,7 @@ export const NavButtons: React.FC = () => {
   return (
     <div className="flex flex-row md:flex-col justify-around w-full md:gap-5">
       {navItems.map(({ href, icon: Icon, label }) => (
-        <Link key={href} href={href} prefetch={false} >
+        <Link key={href} href={href} prefetch={true} >
           <Button
             variant="ghost"
             size="lg"
