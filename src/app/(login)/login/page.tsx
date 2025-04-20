@@ -4,7 +4,7 @@ import { useState } from "react";
 import { login } from "./actions";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import SignupModal from "./SignupModal";
+import SignupModal from "./signup-modal";
 import {
   Card,
   CardContent,
