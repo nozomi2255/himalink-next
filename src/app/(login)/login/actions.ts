@@ -21,7 +21,7 @@ export async function login(formData: FormData) {
     if (error) {
       // If the error message indicates a missing auth session, redirect to the login page
       if (error.message.includes('Auth session missing')) {
-        redirect('/auth');
+        redirect('/login');
       } else {
         redirect('/error');
       }
@@ -29,7 +29,7 @@ export async function login(formData: FormData) {
   } catch (e: any) {
     // In case of an unexpected error, handle it appropriately
     if (e instanceof Error && e.message.includes('Auth session missing')) {
-      redirect('/auth');
+      redirect('/login');
     } else {
       redirect('/error');
     }
@@ -54,14 +54,14 @@ export async function signup(formData: FormData) {
 
     if (error) {
       if (error.message.includes('Auth session missing')) {
-        redirect('/auth');
+        redirect('/login');
       } else {
         redirect('/error');
       }
     }
   } catch (e: any) {
     if (e instanceof Error && e.message.includes('Auth session missing')) {
-      redirect('/auth');
+      redirect('/login');
     } else {
       redirect('/error');
     }
