@@ -25,14 +25,8 @@ export default function Page() {
       {/* テキストとログインボタン */}
       <div className="flex flex-col items-center md:ml-5 text-center md:text-left">
         {/* キャッチコピー */}
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-3">
-          <div className="mb-4 text-center">
-            <span className="relative inline-block before:absolute before:-inset-1 before:block before:-skew-y-3 before:bg-pink-500">
-              <span className="relative text-white dark:text-gray-950">暇な日</span>
-            </span>
-            <br />
-          </div>
-          持て余してない？
+        <h1 className="text-3xl font-bold mb-3">
+          あなたの誘いを待ってる友達がいます。
         </h1>
         {/* ログインボタン */}
         <Button

@@ -43,7 +43,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} bg-gradient-to-b from-sky-200 to-sky-300`}>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
         <CalendarProvider>
           {children}
         </CalendarProvider>
