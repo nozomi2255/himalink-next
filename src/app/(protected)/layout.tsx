@@ -15,7 +15,7 @@ export default async function ProtectedLayout({
   if (!userRecord) throw new Error("Authenticated user not found.");
 
   return (
-    <div className="relative min-h-screen p-0 bg-blue-50">
+    <div className="relative min-h-screen p-0">
       <div className="flex">
         <Sidebar />
         <div className="flex-1">
