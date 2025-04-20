@@ -117,7 +117,7 @@ export default function UserProfileForm({ profile, followingUsers, followers }: 
     } else {
       alert("ログアウトしました。");
       // 必要に応じてリダイレクトを行う
-      router.push("/auth");
+      router.push("/login");
     }
   };
 
