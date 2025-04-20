@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { ja } from "date-fns/locale";
 import { CalendarIcon, Clock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 
 interface EventDialogProps {
     open: boolean;
@@ -57,6 +59,7 @@ export function EventDialog({
     );
     const [startTime, setStartTime] = useState("00:00");
     const [endTime, setEndTime] = useState("00:00");
+    const isMobile = useMediaQuery("(max-width: 768px)");
 
     const supabase = createClient();
 
@@ -139,116 +142,99 @@ export function EventDialog({
         }
     };
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent
-                className="w-[25%] max-w-xl"
-                style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
-                <DialogHeader>
-                    {isOwner && (
+    const EventContent = () => (
+        <>
+            <div className={cn("flex justify-end", isMobile && "mb-4")}>
+                {isOwner && (
+                    entryId ? (
                         <>
-                            <div className="flex justify-end">
-                                {entryId ? (
-                                    <>
-                                        <Button onClick={handleUpdate} variant="ghost" size="icon">
-                                            <Save className="h-4 w-4" />
-                                        </Button>
-                                        <Button onClick={handleDelete} variant="ghost" size="icon">
-                                            <Trash className="h-4 w-4" />
-                                        </Button>
-                                    </>
-                                ) : (
-                                    <Button onClick={handleAdd} variant="ghost" size="icon">
-                                        <Check className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
+                            <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                <Save className="h-4 w-4" />
+                            </Button>
+                            <Button onClick={handleDelete} variant="ghost" size="icon">
+                                <Trash className="h-4 w-4" />
+                            </Button>
                         </>
-                    )}
-                    <DialogTitle className="flex flex-col gap-2">
-                        <Input
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                            placeholder="イベントタイトルを入力"
-                            className="w-full"
-                        />
-                        <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-[100px] justify-start text-left font-normal",
-                                                !startDate && "text-muted-foreground"
-                                            )}
-                                        >
-                                            {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={startDate}
-                                            onSelect={setStartDate}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                {!isAllDay && (
-                                    <Input
-                                        type="time"
-                                        value={startTime}
-                                        onChange={(e) => setStartTime(e.target.value)}
-                                        className="w-[120px]"
-                                    />
-                                )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant={"outline"}
-                                            className={cn(
-                                                "w-[100px] justify-start text-left font-normal",
-                                                !endDate && "text-muted-foreground"
-                                            )}
-                                        >
-                                            {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto p-0">
-                                        <Calendar
-                                            mode="single"
-                                            selected={endDate}
-                                            onSelect={setEndDate}
-                                            initialFocus
-                                        />
-                                    </PopoverContent>
-                                </Popover>
-                                {!isAllDay && (
-                                    <Input
-                                        type="time"
-                                        value={endTime}
-                                        onChange={(e) => setEndTime(e.target.value)}
-                                        className="w-[120px]"
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </DialogTitle>
-                    <DialogDescription>
-                    </DialogDescription>
-                    <div className="flex items-center space-x-2 mt-2">
-                        <Switch
-                            id="all-day"
-                            checked={isAllDay}
-                            onCheckedChange={setIsAllDay}
-                        />
-                        <Label htmlFor="all-day">終日</Label>
+                    ) : (
+                        <Button onClick={handleAdd} variant="ghost" size="icon">
+                            <Check className="h-4 w-4" />
+                        </Button>
+                    )
+                )}
+            </div>
+            <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[100px] justify-start text-left font-normal",
+                                        !startDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={startDate}
+                                    onSelect={setStartDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        {!isAllDay && (
+                            <Input
+                                type="time"
+                                value={startTime}
+                                onChange={(e) => setStartTime(e.target.value)}
+                                className="w-[120px]"
+                            />
+                        )}
                     </div>
-                </DialogHeader>
-
+                    <div className="flex items-center gap-2">
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-[100px] justify-start text-left font-normal",
+                                        !endDate && "text-muted-foreground"
+                                    )}
+                                >
+                                    {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                                <Calendar
+                                    mode="single"
+                                    selected={endDate}
+                                    onSelect={setEndDate}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+                        {!isAllDay && (
+                            <Input
+                                type="time"
+                                value={endTime}
+                                onChange={(e) => setEndTime(e.target.value)}
+                                className="w-[120px]"
+                            />
+                        )}
+                    </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Switch
+                        id="all-day"
+                        checked={isAllDay}
+                        onCheckedChange={setIsAllDay}
+                    />
+                    <Label htmlFor="all-day">終日</Label>
+                </div>
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
                     <div className="flex gap-2">
@@ -269,6 +255,46 @@ export function EventDialog({
                         </div>
                     </div>
                 </div>
+            </div>
+        </>
+    );
+
+    if (isMobile) {
+        return (
+            <Sheet open={open} onOpenChange={onOpenChange}>
+                <SheetContent side="bottom" className="h-[90vh]">
+                    <SheetHeader>
+                        <SheetTitle>
+                            <Input
+                                value={newTitle}
+                                onChange={(e) => setNewTitle(e.target.value)}
+                                placeholder="イベントタイトルを入力"
+                                className="w-full mt-2"
+                            />
+                        </SheetTitle>
+                    </SheetHeader>
+                    <EventContent />
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent
+                className="w-[25%] max-w-xl"
+                style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
+                <DialogHeader>
+                    <DialogTitle>
+                        <Input
+                            value={newTitle}
+                            onChange={(e) => setNewTitle(e.target.value)}
+                            placeholder="イベントタイトルを入力"
+                            className="w-full mt-2"
+                        />
+                    </DialogTitle>
+                    <EventContent />
+                </DialogHeader>
             </DialogContent>
         </Dialog>
     );

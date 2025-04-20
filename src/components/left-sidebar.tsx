@@ -4,7 +4,7 @@ import { NavButtons } from "@/components/navi-items";
 import { Button } from "@/components/ui/button";
 
 const Sidebar: React.FC = () => (
-  <aside className="hidden md:flex flex-col w-[180px] bg-[#f8faff] p-5 border-r h-screen">
+  <aside className="hidden md:flex flex-col justify-center w-[180px] bg-[#f8faff] p-5 border-r h-screen">
     <NavButtons />
 
     <div className="w-full mt-auto justify-center">
