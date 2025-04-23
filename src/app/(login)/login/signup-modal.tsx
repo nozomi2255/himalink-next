@@ -12,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, LogIn } from "lucide-react";
+import { ArrowRight, LogIn, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // onClose プロパティの型を定義
 interface SignupModalProps {
@@ -25,6 +26,8 @@ export default function SignupModal({ onClose }: SignupModalProps) {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,10 +36,24 @@ export default function SignupModal({ onClose }: SignupModalProps) {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("email", email);
-    formData.append("password", password);
-    await signup(formData); // サインアップ処理を呼び出す
+    setIsLoading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+      const result = await signup(formData);
+      
+      // エラーチェック
+      if (result && !result.success) {
+        setError(result.error);
+      }
+    } catch (error: any) {
+      console.error("サインアップエラー:", error);
+      setError(error.message || "サインアップに失敗しました。");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -61,6 +78,11 @@ export default function SignupModal({ onClose }: SignupModalProps) {
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-4">
+          {error && (
+            <Alert variant="destructive" className="py-2">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
           <div className="space-y-4">
             <div className="flex items-center justify-between h-6">
               <div className="flex items-center gap-2">
@@ -75,6 +97,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                     size="sm"
                     onClick={() => setStep("email")}
                     className="text-xs text-blue-600 hover:text-blue-800 h-6"
+                    disabled={isLoading}
                   >
                     変更
                   </Button>
@@ -130,6 +153,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                         size="icon"
                         onClick={() => setShowPassword(!showPassword)}
                         className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                        disabled={isLoading}
                       >
                         {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                       </Button>
@@ -137,8 +161,13 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                         type="submit"
                         size="icon"
                         className="h-8 w-8"
+                        disabled={isLoading}
                       >
-                        <LogIn className="h-4 w-4" />
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <LogIn className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
