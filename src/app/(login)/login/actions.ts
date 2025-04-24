@@ -19,32 +19,24 @@ export async function login(formData: FormData) {
     const { error } = await supabase.auth.signInWithPassword(data);
 
     if (error) {
-      // エラーメッセージを日本語に変換
-      let errorMessage = 'ログインに失敗しました。メールアドレスとパスワードを確認してください。';
-      
-      if (error.message.includes('Invalid login credentials')) {
-        errorMessage = 'メールアドレスまたはパスワードが正しくありません。';
-      } else if (error.message.includes('Email not confirmed')) {
-        errorMessage = 'メールアドレスが確認されていません。メールをご確認ください。';
-      } else if (error.message.includes('rate limit')) {
-        errorMessage = 'ログイン試行回数が多すぎます。しばらく時間をおいてお試しください。';
+      // If the error message indicates a missing auth session, redirect to the login page
+      if (error.message.includes('Auth session missing')) {
+        redirect('/login');
+      } else {
+        redirect('/error');
       }
-      
-      return { 
-        success: false, 
-        error: errorMessage
-      };
     }
-
-    revalidatePath('/', 'layout');
-    redirect('/');
   } catch (e: any) {
     // In case of an unexpected error, handle it appropriately
-    return { 
-      success: false, 
-      error: '予期せぬエラーが発生しました。しばらく経ってからもう一度お試しください。'
-    };
+    if (e instanceof Error && e.message.includes('Auth session missing')) {
+      redirect('/login');
+    } else {
+      redirect('/error');
+    }
   }
+
+  revalidatePath('/', 'layout');
+  redirect('/');
 }
 
 export async function signup(formData: FormData) {
@@ -61,29 +53,20 @@ export async function signup(formData: FormData) {
     const { error } = await supabase.auth.signUp(data);
 
     if (error) {
-      // エラーメッセージを日本語に変換
-      let errorMessage = 'サインアップに失敗しました。';
-      
-      if (error.message.includes('already registered')) {
-        errorMessage = 'このメールアドレスはすでに登録されています。';
-      } else if (error.message.includes('password')) {
-        errorMessage = 'パスワードは8文字以上必要です。';
-      } else if (error.message.includes('email')) {
-        errorMessage = '有効なメールアドレスを入力してください。';
+      if (error.message.includes('Auth session missing')) {
+        redirect('/login');
+      } else {
+        redirect('/error');
       }
-      
-      return { 
-        success: false, 
-        error: errorMessage
-      };
     }
-
-    revalidatePath('/', 'layout');
-    redirect('/');
   } catch (e: any) {
-    return { 
-      success: false, 
-      error: '予期せぬエラーが発生しました。しばらく経ってからもう一度お試しください。'
-    };
+    if (e instanceof Error && e.message.includes('Auth session missing')) {
+      redirect('/login');
+    } else {
+      redirect('/error');
+    }
   }
+
+  revalidatePath('/', 'layout');
+  redirect('/');
 }

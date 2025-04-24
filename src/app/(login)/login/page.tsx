@@ -14,9 +14,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EyeSlashIcon, EyeIcon } from "@heroicons/react/24/outline";
-import { ArrowRight, LogIn, Loader2 } from "lucide-react";
+import { ArrowRight, LogIn } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Page() {
   const [isSignupOpen, setIsSignupOpen] = useState(false);
@@ -25,8 +24,6 @@ export default function Page() {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,24 +32,10 @@ export default function Page() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
-      const result = await login(formData);
-      
-      // エラーチェック
-      if (result && !result.success) {
-        setError(result.error);
-      }
-    } catch (error: any) {
-      console.error("ログインエラー:", error);
-      setError(error.message || "ログインに失敗しました。");
-    } finally {
-      setIsLoading(false);
-    }
+    const formData = new FormData();
+    formData.append("email", email);
+    formData.append("password", password);
+    await login(formData);
   };
 
   const slideAnimation = {
@@ -88,11 +71,6 @@ export default function Page() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-2">
-            {error && (
-              <Alert variant="destructive" className="mb-4 py-2">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
             <form onSubmit={step === "email" ? handleEmailSubmit : handleLogin} className="space-y-4">
               <div className="space-y-4">
                 <div className="flex items-center justify-between h-6">
@@ -160,7 +138,6 @@ export default function Page() {
                             size="icon"
                             onClick={() => setShowPassword(!showPassword)}
                             className="h-8 w-8 text-gray-400 hover:text-gray-600"
-                            disabled={isLoading}
                           >
                             {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                           </Button>
@@ -168,13 +145,8 @@ export default function Page() {
                             type="submit"
                             size="icon"
                             className="h-8 w-8"
-                            disabled={isLoading}
                           >
-                            {isLoading ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <LogIn className="h-4 w-4" />
-                            )}
+                            <LogIn className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
@@ -198,7 +170,6 @@ export default function Page() {
           size="lg"
           onClick={() => setIsSignupOpen(true)}
           className="mt-3 lg:mt-4 text-blue-500 text-sm md:text-base font-semibold hover:underline"
-          disabled={isLoading}
         >
           アカウントを作成
         </Button>
