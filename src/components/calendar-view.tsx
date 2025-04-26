@@ -5,6 +5,7 @@ import MainCalendar from "./main-calendar";
 import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
+import { useCalendar } from "@/contexts/calendar-context";
 
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
@@ -12,11 +13,19 @@ interface CalendarViewProps {
 }
 
 export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
+  const { setUserId, setAvatarUrl: setContextAvatarUrl, setUsername: setContextUsername } = useCalendar();
   const [events, setEvents] = useState<Event[]>([]);
   const isOwner = !userId || userId === currentUserId;
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string>("");
   const supabase = createClient();
+
+  // ContextにユーザーIDを設定
+  useEffect(() => {
+    if (currentUserId) {
+      setUserId(currentUserId);
+    }
+  }, [currentUserId, setUserId]);
 
   //AvatarUrlを取得
   const fetchAvatarUrl = async () => {
@@ -30,6 +39,10 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     } else if (data && data.length > 0) {
       setAvatarUrl(data[0].avatar_url);
       setUsername(data[0].username);
+      
+      // ContextにもAvatarとUsernameを設定
+      setContextAvatarUrl(data[0].avatar_url);
+      setContextUsername(data[0].username);
     }
   };
 
