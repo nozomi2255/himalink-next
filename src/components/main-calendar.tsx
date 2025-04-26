@@ -173,6 +173,82 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     setBarStyles(newBarStyles);
   }, [selectedRange, dragStart, dragEnd, clickedDate, monthList]);
 
+  // イベントを週ごとにグループ化するヘルパー関数
+  const groupEventsByWeek = (event: Event) => {
+    const eventStart = startOfDay(new Date(event.start_time));
+    const eventEnd = startOfDay(new Date(event.end_time));
+    const eventDays = weeks.flat().filter(day => {
+      const current = startOfDay(day);
+      return current >= eventStart && current <= eventEnd;
+    });
+
+    if (eventDays.length === 0) return [];
+
+    // 週ごとにグループ化
+    const weekGroups: Date[][] = [];
+    let currentWeek: Date[] = [];
+
+    eventDays.forEach((day, index) => {
+      if (currentWeek.length === 0 || day.getDay() > currentWeek[currentWeek.length - 1].getDay()) {
+        currentWeek.push(day);
+      } else {
+        weekGroups.push(currentWeek);
+        currentWeek = [day];
+      }
+
+      if (index === eventDays.length - 1) {
+        weekGroups.push(currentWeek);
+      }
+    });
+
+    return weekGroups;
+  };
+
+  // 各イベントのバースタイルを計算する
+  const calculateEventBarStyles = () => {
+    const allBarStyles: Array<BarStyle & { title: string, id: string }> = [];
+
+    events.forEach(event => {
+      if (new Date(event.start_time).toDateString() !== new Date(event.end_time).toDateString()) {
+        // 複数日にまたがるイベント
+        const weekGroups = groupEventsByWeek(event);
+        
+        const eventBarStyles = weekGroups.map(weekDays => {
+          const firstDayEl = document.querySelector(`[data-date="${format(weekDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
+          const lastDayEl = document.querySelector(`[data-date="${format(weekDays[weekDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
+
+          if (!firstDayEl || !lastDayEl) return null;
+
+          return {
+            top: `${firstDayEl.offsetTop + 24}px`,
+            left: `${firstDayEl.offsetLeft}px`,
+            width: `${(lastDayEl.offsetLeft + lastDayEl.offsetWidth) - firstDayEl.offsetLeft}px`,
+            title: event.title,
+            id: event.id
+          };
+        }).filter((style): style is BarStyle & { title: string, id: string } => style !== null);
+
+        allBarStyles.push(...eventBarStyles);
+      }
+    });
+
+    return allBarStyles;
+  };
+
+  const [eventBarStyles, setEventBarStyles] = useState<Array<BarStyle & { title: string, id: string }>>([]);
+
+  useEffect(() => {
+    if (!calendarRef.current) return;
+    
+    // DOMが完全に描画された後に実行するために、タイマーを使用
+    const timer = setTimeout(() => {
+      const styles = calculateEventBarStyles();
+      setEventBarStyles(styles);
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [events, monthList]);
+
   useEffect(() => {
     if (!modalOpen) {
       setSelectedRange(null);
@@ -346,6 +422,19 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
             New Event
           </div>
         ))}
+        {eventBarStyles.map((style, index) => (
+          <div
+            key={`event-${style.id}-${index}`}
+            className="absolute text-white text-xs px-2 py-0.5 bg-blue-500 rounded-lg shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] cursor-pointer pointer-events-auto"
+            style={style}
+            onClick={(e) => {
+              e.stopPropagation();
+              eventClick && eventClick({ event: { id: style.id, title: style.title } });
+            }}
+          >
+            {style.title}
+          </div>
+        ))}
       </div>
       <CalendarHeader />
 
@@ -425,6 +514,10 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
                     const eventStart = startOfDay(new Date(event.start_time));
                     const eventEnd = startOfDay(new Date(event.end_time));
                     const cellDay = startOfDay(day);
+                    // 複数日にまたがるイベントの場合は上部のバーで表示するので、ここではスキップ
+                    if (eventStart.toDateString() !== eventEnd.toDateString()) {
+                      return false;
+                    }
                     return cellDay >= eventStart && cellDay <= eventEnd;
                   })
                   .map(event => (
