@@ -262,7 +262,7 @@ export function EventDialog({
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange}>
-                <SheetContent side="bottom" className="h-[90vh]">
+                <SheetContent side="bottom" className="h-[70%]">
                     <SheetHeader>
                         <SheetTitle>
                             <Input

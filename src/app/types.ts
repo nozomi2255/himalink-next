@@ -35,4 +35,13 @@ export interface Event {
     following_id: string; // フォローされているユーザーのID
   }
   
+  export type Memo = {
+    id: string;
+    title: string;
+    body: string;
+    user_id: string;
+    user_name: string;
+    created_at: string;
+    updated_at: string;
+  };
   // フォロワーやフォロー中のリストを表す場合は、UserRecord の配列を利用することが一般的です

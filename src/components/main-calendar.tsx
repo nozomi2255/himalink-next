@@ -385,7 +385,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
                   .map(event => (
                     <div
                       key={event.id}
-                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5"
+                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
                       onClick={(e) => {
                         setBarStyles([]); //barstyleをリセット
                         setClickedDate(null); //clickedDateをリセット

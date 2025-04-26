@@ -1,5 +1,5 @@
 "use client";
-import { CalendarDays, GalleryVerticalEnd, User, Search } from "lucide-react";
+import { CalendarDays, GalleryVerticalEnd, User, Search, NotebookTabs} from "lucide-react";
 import React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ export const navItems = [
   { label: "タイムライン", icon: GalleryVerticalEnd, href: "/timeline" },
   { label: "検索", icon: Search, href: "/search" },
   { label: "プロフィール", icon: User, href: "/profile" },
+  { label: "プロフィール", icon: NotebookTabs, href: "/memo" },
 ] as const;
 
 export const NavButtons: React.FC = () => {

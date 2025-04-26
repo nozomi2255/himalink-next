@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { useUser } from "@/hooks/useUser";
+import { useUser } from "@/hooks/use-user";
 
 interface TimelineEvent {
   event_id: string;
