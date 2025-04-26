@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EyeSlashIcon, EyeIcon } from "@heroicons/react/24/outline";
-import { ArrowRight, LogIn } from "lucide-react";
+import { ArrowRight, LogIn, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function Page() {
@@ -24,6 +24,7 @@ export default function Page() {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [user, setUser] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,10 +33,17 @@ export default function Page() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("email", email);
-    formData.append("password", password);
-    await login(formData);
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+      await login(formData);
+    } catch (error) {
+      console.error("ログインエラー:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const slideAnimation = {
@@ -130,6 +138,7 @@ export default function Page() {
                           onChange={(e) => setPassword(e.target.value)}
                           className="w-full px-3 py-2 border rounded-md pr-24"
                           required
+                          disabled={isLoading}
                         />
                         <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
                           <Button
@@ -138,6 +147,7 @@ export default function Page() {
                             size="icon"
                             onClick={() => setShowPassword(!showPassword)}
                             className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                            disabled={isLoading}
                           >
                             {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                           </Button>
@@ -145,8 +155,13 @@ export default function Page() {
                             type="submit"
                             size="icon"
                             className="h-8 w-8"
+                            disabled={isLoading}
                           >
-                            <LogIn className="h-4 w-4" />
+                            {isLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <LogIn className="h-4 w-4" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -159,6 +174,7 @@ export default function Page() {
           <CardFooter className="flex justify-center pt-2">
             <button
               className="text-xs text-blue-600 hover:text-blue-800"
+              disabled={isLoading}
             >
               パスワードを忘れた場合はこちら
             </button>

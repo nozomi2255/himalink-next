@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, LogIn } from "lucide-react";
+import { ArrowRight, LogIn, Loader2 } from "lucide-react";
 
 // onClose プロパティの型を定義
 interface SignupModalProps {
@@ -25,6 +25,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
   const [password, setPassword] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [isOpen, setIsOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,10 +34,17 @@ export default function SignupModal({ onClose }: SignupModalProps) {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("email", email);
-    formData.append("password", password);
-    await signup(formData); // サインアップ処理を呼び出す
+    setIsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("email", email);
+      formData.append("password", password);
+      await signup(formData); // サインアップ処理を呼び出す
+    } catch (error) {
+      console.error("サインアップエラー:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClose = () => {
@@ -122,6 +130,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full px-3 py-2 border rounded-md pr-24"
                       required
+                      disabled={isLoading}
                     />
                     <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1">
                       <Button
@@ -130,6 +139,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                         size="icon"
                         onClick={() => setShowPassword(!showPassword)}
                         className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                        disabled={isLoading}
                       >
                         {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                       </Button>
@@ -137,8 +147,13 @@ export default function SignupModal({ onClose }: SignupModalProps) {
                         type="submit"
                         size="icon"
                         className="h-8 w-8"
+                        disabled={isLoading}
                       >
-                        <LogIn className="h-4 w-4" />
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <LogIn className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
