@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
-  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfDay, addDays, format, subMonths, addMonths, isBefore, isAfter, isSameMonth, getYear, getMonth
 } from "date-fns";
 import { Event } from "../app/types";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -13,6 +13,10 @@ import { CalendarHeader } from "./calendar-header";
 // TODO: 月遷移のスクロールに関して、週単位か、月単位のスクロールしかできないように制限する。微妙なスクロールはできないようにする.
 // TODO: ドラッグ時のモーダルポジションを修正する。
 
+// 祝日判定用のインターフェース
+interface HolidaysData {
+  [date: string]: string;
+}
 
 interface MainCalendarProps {
   events: Event[];
@@ -44,6 +48,34 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
   setModalPosition 
 }) => {
   const { currentMonth, setCurrentMonth } = useCalendar();
+  const [holidays, setHolidays] = useState<HolidaysData>({});
+
+  // 祝日データを取得する関数
+  const fetchHolidays = async (year: number) => {
+    try {
+      const response = await fetch(`https://holidays-jp.github.io/api/v1/${year}/date.json`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("祝日データの取得に失敗しました:", error);
+      return {};
+    }
+  };
+
+  // 初期表示時と年が変わった時に祝日データを取得
+  useEffect(() => {
+    const loadHolidays = async () => {
+      const currentYear = getYear(new Date());
+      const holidaysData = await fetchHolidays(currentYear);
+      
+      // 翌年のデータも取得（年末の表示時に必要）
+      const nextYearHolidays = await fetchHolidays(currentYear + 1);
+      
+      setHolidays({...holidaysData, ...nextYearHolidays});
+    };
+    
+    loadHolidays();
+  }, []);
 
   const getWeeksBetween = (months: Date[]): Date[][] => {
     const first = startOfWeek(startOfMonth(months[0]));
@@ -315,10 +347,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           </div>
         ))}
       </div>
-      <CalendarHeader
-        animatingHeader={animatingHeader}
-        scrollDirection={scrollDirection}
-      />
+      <CalendarHeader />
 
       /* 4. カレンダー日付グリッド */
       <div className="grid grid-cols-7 w-full max-w-full box-border">
@@ -331,6 +360,10 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           const below = days[index + 7];
           const isVBoundary = right && format(right, "yyyy-MM") !== thisMonth;
           const isHBoundary = below && format(below, "yyyy-MM") !== thisMonth;
+          
+          // 祝日判定
+          const dateStr = format(day, "yyyy-MM-dd");
+          const isHoliday = holidays[dateStr] !== undefined;
 
           // 各方向の枠線スタイル
           const borderTop    = "border-t border-gray-200";
@@ -357,19 +390,31 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           return (
             <div
               key={index}
-              data-date={format(day, "yyyy-MM-dd")}
+              data-date={dateStr}
               onMouseDown={() => handleMouseDown(day)}
               onMouseEnter={() => handleMouseEnter(day)}
               onMouseUp={handleMouseUp}
-              onClick={() => handleDateClick(format(day, "yyyy-MM-dd"))}
+              onClick={() => handleDateClick(dateStr)}
               className={cellClasses}
             >
-              <div className={`absolute top-1 left-1 font-bold ${isCurrentMonth ? 'text-black' : 'text-gray-500 opacity-30'}`}>
+              <div className={`absolute top-1 left-1 font-bold ${
+                isCurrentMonth 
+                  ? isHoliday || colIndex === 0 
+                    ? 'text-red-500' // 祝日・日曜日は赤色
+                    : colIndex === 6
+                      ? 'text-blue-500' // 土曜日は青色
+                      : 'text-black' 
+                  : isHoliday || colIndex === 0 
+                    ? 'text-red-300 opacity-30' // 他の月の祝日・日曜日
+                    : colIndex === 6
+                      ? 'text-blue-300 opacity-30' // 他の月の土曜日
+                      : 'text-gray-500 opacity-30'
+              }`}>
                 {format(day, "d")}
               </div>
               {/* イベントの表示コンテナ（絶対位置） */}
               <div className="absolute z-10 w-full box-border rounded-lg">
-                {clickedDate === format(day, "yyyy-MM-dd") && (
+                {clickedDate === dateStr && (
                   <div className="text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100]">
                     New Event
                   </div>
@@ -385,7 +430,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
                   .map(event => (
                     <div
                       key={event.id}
-                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-sm px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
+                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-xs px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
                       onClick={(e) => {
                         setBarStyles([]); //barstyleをリセット
                         setClickedDate(null); //clickedDateをリセット
