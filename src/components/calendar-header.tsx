@@ -84,15 +84,18 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
     return unique;
   }, []);
   
-  // 表示するアバターのリスト（最大5件）
-  const avatarsToDisplay = uniqueAvatars.slice(0, 5);
+  // すべてのユニークなアバターを表示（最大件数の制限を削除）
+  const avatarsToDisplay = uniqueAvatars;
 
   return (
-    <div className="sticky flex-col top-0 z-[40] bg-white border-b border-gray-300 shadow-sm p-2">
-      <div className="flex flex-row items-center justify-between px-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-bold m-0">{year}年 {month}</h2>
-          <div className="flex ml-4">
+    <div className="sticky flex-col top-0 z-[40] bg-white border-b border-gray-300 shadow-sm p-4">
+      <div className="flex flex-row items-center px-2">
+        <div className="w-24 flex flex-col items-center mr-4">
+          <span className="text-sm text-gray-500">{year}年</span>
+          <h2 className="text-2xl font-bold">{month}</h2>
+        </div>
+        <div className="flex-1 overflow-x-auto max-w-[70vw]">
+          <div className="flex space-x-2">
             {avatarsToDisplay.map((event, index) => (
               <Link 
                 key={`${event.user_id || index}`}
@@ -101,23 +104,23 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
               >
                 <Avatar 
                   className="inline-flex border-2 border-white hover:border-blue-400 transition-colors cursor-pointer"
-                  style={{ width: '32px', height: '32px', zIndex: 10 - index }}
+                  style={{ width: '48px', height: '48px', zIndex: 10 - (index % 10) }}
                 >
                   <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
                   <AvatarFallback>ユ</AvatarFallback>
                 </Avatar>
               </Link>
             ))}
-            {isLoading && <div className="text-xs text-gray-500 ml-2">読込中...</div>}
+            {isLoading && <div className="text-sm text-gray-500 my-auto ml-2">読込中...</div>}
             {!isLoading && avatarsToDisplay.length === 0 && !error && userId && (
-              <div className="text-xs text-gray-500 ml-2">最近の更新はありません</div>
+              <div className="text-sm text-gray-500 my-auto ml-2">最近の更新はありません</div>
             )}
           </div>
         </div>
       </div>
       <div className="flex justify-between">
         {["日", "月", "火", "水", "木", "金", "土"].map((day, idx) => (
-          <div key={idx} className="w-1/7 text-center text-xs">{day}</div>
+          <div key={idx} className="w-1/7 text-center text-sm font-medium">{day}</div>
         ))}
       </div>
     </div>
