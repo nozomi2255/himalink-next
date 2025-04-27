@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface RecentEvent {
   event_id: string;
@@ -44,7 +46,17 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
   const [groupedEvents, setGroupedEvents] = useState<GroupedEvents[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [visitedUsers, setVisitedUsers] = useState<string[]>([]);
+  const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    // 訪問済みユーザーをローカルストレージから読み込む
+    const storedVisitedUsers = localStorage.getItem('visitedUsers');
+    if (storedVisitedUsers) {
+      setVisitedUsers(JSON.parse(storedVisitedUsers));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchRecentEvents = async () => {
@@ -98,6 +110,23 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
     });
   };
 
+  // ユーザー訪問の記録
+  const handleUserVisit = (userId: string) => {
+    setLoadingUserId(userId);
+    
+    // 訪問済みユーザーリストに追加
+    if (!visitedUsers.includes(userId)) {
+      const newVisitedUsers = [...visitedUsers, userId];
+      setVisitedUsers(newVisitedUsers);
+      localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
+    }
+    
+    // ローディング表示を一定時間後に解除（画面遷移のタイミングに合わせる）
+    setTimeout(() => {
+      setLoadingUserId(null);
+    }, 1000);
+  };
+
   return (
     <div className="w-[200px] p-4 border-l border-gray-200 bg-gray-50 flex flex-col gap-4 hidden md:block">
       <div className="flex items-center gap-2 bg-white p-2 rounded shadow-sm">
@@ -119,14 +148,40 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
               className="flex gap-2.5 p-2 hover:bg-blue-50 cursor-pointer transition-colors"
               onClick={() => toggleExpand(group.user_id)}
             >
-              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                <Link href={`/other-calendar/${group.user_id}`}>
-                  <img 
-                    src={group.avatar_url || "/default-avatar.png"} 
-                    alt="ユーザーアバター" 
-                    className="w-10 h-10 rounded-full object-cover cursor-pointer"
-                  />
-                </Link>
+              <div className="flex-shrink-0 relative" onClick={(e) => e.stopPropagation()}>
+                {(() => {
+                  const isVisited = visitedUsers.includes(group.user_id);
+                  const isLoading = loadingUserId === group.user_id;
+                  const borderStyle = isVisited 
+                    ? 'border-2 border-gray-200' 
+                    : 'p-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600';
+                  
+                  return (
+                    <div 
+                      className={`relative rounded-full ${borderStyle}`}
+                      style={{ width: '42px', height: '42px' }}
+                    >
+                      <Link 
+                        href={`/other-calendar/${group.user_id}`}
+                        onClick={() => handleUserVisit(group.user_id)}
+                        className="relative inline-block w-full h-full"
+                      >
+                        <Avatar 
+                          className="inline-flex bg-white cursor-pointer"
+                          style={{ width: '38px', height: '38px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                        >
+                          <AvatarImage src={group.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
+                          <AvatarFallback>ユ</AvatarFallback>
+                        </Avatar>
+                        {isLoading && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20">
+                            <Loader2 className="h-4 w-4 text-white animate-spin" />
+                          </div>
+                        )}
+                      </Link>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="flex flex-col justify-center flex-1">
                 <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">

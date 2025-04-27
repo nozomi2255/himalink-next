@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 interface RecentEvent {
   event_id: string;
@@ -19,6 +20,8 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   const [recentAvatars, setRecentAvatars] = useState<RecentEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [visitedUsers, setVisitedUsers] = useState<string[]>([]);
+  const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const supabase = createClient();
   const currentDate = new Date(currentMonth + "-01"); // YYYY-MM-01 形式に変換
   
@@ -26,6 +29,14 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
   const year = currentDate.getFullYear();
   const month = monthNames[currentDate.getMonth()];
+
+  useEffect(() => {
+    // 訪問済みユーザーをローカルストレージから読み込む
+    const storedVisitedUsers = localStorage.getItem('visitedUsers');
+    if (storedVisitedUsers) {
+      setVisitedUsers(JSON.parse(storedVisitedUsers));
+    }
+  }, []);
 
   useEffect(() => {
     const fetchRecentEvents = async () => {
@@ -87,31 +98,68 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   // すべてのユニークなアバターを表示（最大件数の制限を削除）
   const avatarsToDisplay = uniqueAvatars;
 
+  // ユーザー訪問の記録
+  const handleUserVisit = (userId: string) => {
+    setLoadingUserId(userId);
+    
+    // 訪問済みユーザーリストに追加
+    if (!visitedUsers.includes(userId)) {
+      const newVisitedUsers = [...visitedUsers, userId];
+      setVisitedUsers(newVisitedUsers);
+      localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
+    }
+  };
+
   return (
     <div className="sticky flex-col top-0 z-[40] bg-white border-b border-gray-300 shadow-sm p-4">
       <div className="flex flex-row items-center px-2">
-        <div className="w-24 flex flex-col items-center mr-4">
+        <div className="w-17 flex flex-col items-start">
           <span className="text-sm text-gray-500">{year}年</span>
           <h2 className="text-2xl font-bold">{month}</h2>
         </div>
-        <div className="flex-1 overflow-x-auto max-w-[70vw]">
+        <div className="flex-1 overflow-x-auto max-w-[80vw]">
           <div className="flex space-x-2">
-            {avatarsToDisplay.map((event, index) => (
-              <Link 
-                key={`${event.user_id || index}`}
-                href={`/other-calendar/${event.user_id}`}
-                title="このユーザーのカレンダーを表示"
-              >
-                <Avatar 
-                  className="inline-flex border-2 border-white hover:border-blue-400 transition-colors cursor-pointer"
-                  style={{ width: '48px', height: '48px', zIndex: 10 - (index % 10) }}
+            {avatarsToDisplay.map((event, index) => {
+              const isVisited = visitedUsers.includes(event.user_id);
+              const isLoading = loadingUserId === event.user_id;
+              
+              // ボーダースタイルの設定
+              const borderStyle = isVisited 
+                ? 'border-2 border-gray-200' 
+                : 'p-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600';
+              
+              return (
+                <div 
+                  key={`${event.user_id || index}`}
+                  className={`relative rounded-full ${borderStyle}`}
+                  style={{ width: '52px', height: '52px' }}
                 >
-                  <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
-                  <AvatarFallback>ユ</AvatarFallback>
-                </Avatar>
-              </Link>
-            ))}
-            {isLoading && <div className="text-sm text-gray-500 my-auto ml-2">読込中...</div>}
+                  <Link 
+                    href={`/other-calendar/${event.user_id}`}
+                    onClick={() => handleUserVisit(event.user_id)}
+                    title="このユーザーのカレンダーを表示"
+                    className="relative inline-block w-full h-full"
+                  >
+                    <Avatar 
+                      className={`inline-flex bg-white cursor-pointer`}
+                      style={{ width: '48px', height: '48px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+                    >
+                      <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
+                      <AvatarFallback>ユ</AvatarFallback>
+                    </Avatar>
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20">
+                        <Loader2 className="h-5 w-5 text-white animate-spin" />
+                      </div>
+                    )}
+                  </Link>
+                </div>
+              );
+            })}
+            {isLoading && <div className="text-sm text-gray-500 my-auto ml-2 flex items-center gap-2">
+              <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
+              読込中...
+            </div>}
             {!isLoading && avatarsToDisplay.length === 0 && !error && userId && (
               <div className="text-sm text-gray-500 my-auto ml-2">最近の更新はありません</div>
             )}
