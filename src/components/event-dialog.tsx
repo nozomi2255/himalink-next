@@ -270,6 +270,7 @@ export function EventDialog({
                                 onChange={(e) => setNewTitle(e.target.value)}
                                 placeholder="イベントタイトルを入力"
                                 className="w-full mt-2"
+                                autoFocus={false}
                             />
                         </SheetTitle>
                     </SheetHeader>
@@ -291,6 +292,7 @@ export function EventDialog({
                             onChange={(e) => setNewTitle(e.target.value)}
                             placeholder="イベントタイトルを入力"
                             className="w-full mt-2"
+                            autoFocus={false}
                         />
                     </DialogTitle>
                     <EventContent />
