@@ -262,7 +262,7 @@ export function EventDialog({
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange}>
-                <SheetContent side="bottom" className="h-[70%]">
+                <SheetContent side="bottom" className="h-[70%]" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader>
                         <SheetTitle>
                             <Input
@@ -284,7 +284,8 @@ export function EventDialog({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
                 className="w-[25%] max-w-xl"
-                style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}>
+                style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}
+                onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>
                         <Input
