@@ -19,6 +19,17 @@ import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 
+interface ReactionUser {
+    user_id: string;
+    username: string;
+    avatar_url?: string;
+}
+
+interface ReactionDetail {
+    count: number;
+    users: ReactionUser[];
+}
+
 interface EventDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -48,6 +59,8 @@ export function EventDialog({
     const [entry, setEntry] = useState<any>(null);
     const [comments, setComments] = useState<any[]>([]);
     const [reactions, setReactions] = useState<Record<string, number>>({});
+    const [reactionDetails, setReactionDetails] = useState<Record<string, ReactionDetail>>({});
+    const [userReactions, setUserReactions] = useState<string[]>([]);
     const [commentText, setCommentText] = useState("");
     const [newTitle, setNewTitle] = useState("");
     const [isAllDay, setIsAllDay] = useState(true);
@@ -65,10 +78,13 @@ export function EventDialog({
 
     useEffect(() => {
         if (!entryId || !open) return;
+        console.log("entryId:", entryId);
         const fetchData = async () => {
             const { data: entryData } = await supabase.rpc("get_entry_with_details", { p_entry_id: entryId });
             const { data: commentData } = await supabase.rpc("get_entry_comments", { p_entry_id: entryId });
             const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
+            const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
+            
             const entry = entryData?.[0] ?? null;
             setEntry(entry);
             setNewTitle(entry?.title ?? "");
@@ -84,7 +100,40 @@ export function EventDialog({
                 setEndTime(format(end, "HH:mm"));
             }
             setComments(commentData ?? []);
+            console.log("Reactions:", reactionData);
             setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
+            
+            // リアクション詳細（ユーザー情報含む）の処理
+            const detailsMap: Record<string, ReactionDetail> = {};
+            const currentUserReactions: string[] = [];
+            
+            if (reactionUsersData) {
+                // 現在のユーザーID（クライアント側から取得）
+                const { data: { user } } = await supabase.auth.getUser();
+                const currentUserId = user?.id;
+                
+                reactionUsersData.forEach((reaction: any) => {
+                    if (!detailsMap[reaction.reaction_type]) {
+                        detailsMap[reaction.reaction_type] = {
+                            count: 0,
+                            users: []
+                        };
+                    }
+                    detailsMap[reaction.reaction_type].count++;
+                    detailsMap[reaction.reaction_type].users.push({
+                        user_id: reaction.user_id,
+                        username: reaction.username || reaction.user_id,
+                        avatar_url: reaction.avatar_url
+                    });
+                    
+                    // 現在のユーザーがリアクションしているか確認
+                    if (reaction.user_id === currentUserId && !currentUserReactions.includes(reaction.reaction_type)) {
+                        currentUserReactions.push(reaction.reaction_type);
+                    }
+                });
+            }
+            setReactionDetails(detailsMap);
+            setUserReactions(currentUserReactions);
         };
         fetchData();
     }, [entryId, open]);
@@ -139,6 +188,80 @@ export function EventDialog({
             console.error('RPC delete_entry error:', error);
         } else {
             onOpenChange(false);
+        }
+    };
+
+    const handleReactionToggle = async (emoji: string) => {
+        if (!entryId) return;
+        
+        try {
+            // すでにリアクションしているか確認
+            const { data: existingReaction } = await supabase.rpc('get_user_reaction', {
+                p_entry_id: entryId,
+                p_reaction_type: emoji
+            });
+            console.log("get_user_reaction実行結果:", { existingReaction });
+            
+            if (existingReaction && existingReaction.length > 0) {
+                // リアクションが存在する場合は削除         
+                const { error, data } = await supabase.rpc('delete_entry_reaction', {
+                    p_entry_id: entryId,
+                    p_reaction_type: emoji
+                });
+                
+                console.log("削除実行結果:", { error, data });
+                if (error) {
+                    console.error("削除エラー詳細:", error);
+                    throw error;
+                }
+                
+                console.log("削除されたリアクション数:", data?.[0]?.deleted_count || 0);
+                
+                // データを再取得して状態を更新
+                const { data: newReactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
+                
+                // 状態を更新（ユーザーのリアクションリストから削除）
+                setUserReactions(prev => prev.filter(r => r !== emoji));
+            } else {
+                // リアクションが存在しない場合は追加
+                const { error } = await supabase.rpc('add_entry_reaction', {
+                    p_entry_id: entryId,
+                    p_reaction_type: emoji
+                });
+                
+                if (error) throw error;
+                
+                // 状態を更新（ユーザーのリアクションリストに追加）
+                setUserReactions(prev => [...prev, emoji]);
+            }
+            
+            // データを再取得
+            const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
+            const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
+            
+            setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
+            
+            // リアクション詳細の更新
+            const detailsMap: Record<string, ReactionDetail> = {};
+            if (reactionUsersData) {
+                reactionUsersData.forEach((reaction: any) => {
+                    if (!detailsMap[reaction.reaction_type]) {
+                        detailsMap[reaction.reaction_type] = {
+                            count: 0,
+                            users: []
+                        };
+                    }
+                    detailsMap[reaction.reaction_type].count++;
+                    detailsMap[reaction.reaction_type].users.push({
+                        user_id: reaction.user_id,
+                        username: reaction.username || reaction.user_id,
+                        avatar_url: reaction.avatar_url
+                    });
+                });
+            }
+            setReactionDetails(detailsMap);
+        } catch (error) {
+            console.error('リアクション処理エラー:', error);
         }
     };
 
@@ -237,12 +360,44 @@ export function EventDialog({
                 </div>
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
-                    <div className="flex gap-2">
-                        {["👍", "❤️", "😂", "🍻"].map((emoji) => (
-                            <Button key={emoji} variant="outline" size="sm">
-                                {emoji} {reactions[emoji] || 0}
-                            </Button>
-                        ))}
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            {["👍", "❤️", "😂", "🍻"].map((emoji) => (
+                                <div key={emoji} className="relative group">
+                                    <Button 
+                                        variant={userReactions.includes(emoji) ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => handleReactionToggle(emoji)}
+                                    >
+                                        {emoji} {reactions[emoji] || 0}
+                                    </Button>
+                                    {reactionDetails[emoji]?.users?.length > 0 && (
+                                        <div className="absolute top-full left-0 mt-1 bg-white p-2 rounded shadow-md z-10 hidden group-hover:block w-max border border-gray-200">
+                                            {reactionDetails[emoji].users.map((user) => (
+                                                <div key={user.user_id} className="text-xs py-1 flex items-center gap-1">
+                                                    <span className="font-semibold">{user.username}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {Object.entries(reactionDetails).length > 0 && (
+                            <div className="text-xs text-gray-500">
+                                {Object.entries(reactionDetails).map(([emoji, detail]) => (
+                                    detail.users.length > 0 && (
+                                        <div key={emoji} className="flex items-center gap-1 mt-1">
+                                            <span>{emoji}</span>
+                                            <span className="font-semibold">
+                                                {detail.users.slice(0, 3).map(u => u.username).join(', ')}
+                                                {detail.users.length > 3 ? ` 他${detail.users.length - 3}人` : ''}
+                                            </span>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div>
                         <h4 className="text-sm font-medium">コメント</h4>
