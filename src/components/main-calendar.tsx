@@ -207,11 +207,27 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
   // 各イベントのバースタイルを計算する
   const calculateEventBarStyles = () => {
     const allBarStyles: Array<BarStyle & { title: string, id: string }> = [];
+    
+    // イベントを日付でソート
+    const sortedEvents = [...events].sort((a, b) => 
+      new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+    
+    // イベントの配置位置を追跡
+    const eventPositions: Record<string, number> = {};
 
-    events.forEach(event => {
+    sortedEvents.forEach(event => {
       if (new Date(event.start_time).toDateString() !== new Date(event.end_time).toDateString()) {
         // 複数日にまたがるイベント
         const weekGroups = groupEventsByWeek(event);
+        
+        // このイベントの垂直位置を決定（既に配置されている位置を避ける）
+        const eventKey = `${event.start_time}-${event.end_time}`;
+        let position = 0;
+        while (eventPositions[`${eventKey}-${position}`]) {
+          position++;
+        }
+        eventPositions[`${eventKey}-${position}`] = 1;
         
         const eventBarStyles = weekGroups.map(weekDays => {
           const firstDayEl = document.querySelector(`[data-date="${format(weekDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
@@ -220,7 +236,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
           if (!firstDayEl || !lastDayEl) return null;
 
           return {
-            top: `${firstDayEl.offsetTop + 24}px`,
+            top: `${firstDayEl.offsetTop + 24 + (position * 22)}px`, // 位置に基づいて垂直位置を変更
             left: `${firstDayEl.offsetLeft}px`,
             width: `${(lastDayEl.offsetLeft + lastDayEl.offsetWidth) - firstDayEl.offsetLeft}px`,
             title: event.title,
