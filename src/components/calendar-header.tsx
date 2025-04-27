@@ -9,6 +9,7 @@ interface RecentEvent {
   event_id: string;
   user_id: string;
   avatar_url: string;
+  updated_at?: string;
 }
 
 interface CalendarHeaderProps {
@@ -20,7 +21,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   const [recentAvatars, setRecentAvatars] = useState<RecentEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [visitedUsers, setVisitedUsers] = useState<string[]>([]);
+  const [visitedUsers, setVisitedUsers] = useState<{[key: string]: {visited: boolean, lastSeenUpdate?: string}}>({});
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const supabase = createClient();
   const currentDate = new Date(currentMonth + "-01"); // YYYY-MM-01 形式に変換
@@ -99,15 +100,34 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   const avatarsToDisplay = uniqueAvatars;
 
   // ユーザー訪問の記録
-  const handleUserVisit = (userId: string) => {
+  const handleUserVisit = (userId: string, updatedAt?: string) => {
     setLoadingUserId(userId);
     
-    // 訪問済みユーザーリストに追加
-    if (!visitedUsers.includes(userId)) {
-      const newVisitedUsers = [...visitedUsers, userId];
-      setVisitedUsers(newVisitedUsers);
-      localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
+    // 訪問済みユーザー情報を更新
+    const newVisitedUsers = { 
+      ...visitedUsers,
+      [userId]: { 
+        visited: true, 
+        lastSeenUpdate: updatedAt 
+      }
+    };
+    
+    setVisitedUsers(newVisitedUsers);
+    localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
+  };
+
+  // ユーザーが新しいイベントを持っているかチェック
+  const hasNewEvent = (userId: string, updatedAt?: string) => {
+    if (!visitedUsers[userId] || !updatedAt) return true;
+    
+    const lastSeen = visitedUsers[userId].lastSeenUpdate;
+    
+    // 最後に見た更新日時がない、または新しい更新がある場合
+    if (!lastSeen || (updatedAt && lastSeen < updatedAt)) {
+      return true;
     }
+    
+    return false;
   };
 
   return (
@@ -120,11 +140,12 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
         <div className="flex-1 overflow-x-auto max-w-[80vw]">
           <div className="flex space-x-2">
             {avatarsToDisplay.map((event, index) => {
-              const isVisited = visitedUsers.includes(event.user_id);
+              const isVisited = visitedUsers[event.user_id]?.visited || false;
+              const hasNewContent = hasNewEvent(event.user_id, event.updated_at);
               const isLoading = loadingUserId === event.user_id;
               
-              // ボーダースタイルの設定
-              const borderStyle = isVisited 
+              // ボーダースタイルの設定 - 新しいコンテンツがある場合はカラーボーダー
+              const borderStyle = isVisited && !hasNewContent
                 ? 'border-2 border-gray-200' 
                 : 'p-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600';
               
@@ -136,7 +157,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
                 >
                   <Link 
                     href={`/other-calendar/${event.user_id}`}
-                    onClick={() => handleUserVisit(event.user_id)}
+                    onClick={() => handleUserVisit(event.user_id, event.updated_at)}
                     title="このユーザーのカレンダーを表示"
                     className="relative inline-block w-full h-full"
                   >

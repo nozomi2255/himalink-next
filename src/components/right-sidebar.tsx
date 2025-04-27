@@ -19,6 +19,7 @@ interface GroupedEvents {
   user_id: string;
   avatar_url: string;
   events: RecentEvent[];
+  latest_updated_at?: string;
 }
 
 interface RightSidebarProps {
@@ -46,7 +47,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
   const [groupedEvents, setGroupedEvents] = useState<GroupedEvents[]>([]);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
-  const [visitedUsers, setVisitedUsers] = useState<string[]>([]);
+  const [visitedUsers, setVisitedUsers] = useState<{[key: string]: {visited: boolean, lastSeenUpdate?: string}}>({});
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
   const supabase = createClient();
 
@@ -81,9 +82,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
           grouped[event.user_id] = {
             user_id: event.user_id,
             avatar_url: event.avatar_url,
-            events: []
+            events: [],
+            latest_updated_at: event.updated_at
           };
         }
+        
+        // 最新の更新日時を追跡
+        if (grouped[event.user_id] && 
+            (!grouped[event.user_id].latest_updated_at || 
+            event.updated_at > grouped[event.user_id].latest_updated_at!)) {
+          grouped[event.user_id].latest_updated_at = event.updated_at;
+        }
+        
         grouped[event.user_id].events.push(event);
       });
       
@@ -110,16 +120,35 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
     });
   };
 
+  // ユーザーが新しいイベントを持っているかチェック
+  const hasNewEvent = (userId: string, updatedAt?: string) => {
+    if (!visitedUsers[userId] || !updatedAt) return true;
+    
+    const lastSeen = visitedUsers[userId].lastSeenUpdate;
+    
+    // 最後に見た更新日時がない、または新しい更新がある場合
+    if (!lastSeen || (updatedAt && lastSeen < updatedAt)) {
+      return true;
+    }
+    
+    return false;
+  };
+
   // ユーザー訪問の記録
-  const handleUserVisit = (userId: string) => {
+  const handleUserVisit = (userId: string, updatedAt?: string) => {
     setLoadingUserId(userId);
     
-    // 訪問済みユーザーリストに追加
-    if (!visitedUsers.includes(userId)) {
-      const newVisitedUsers = [...visitedUsers, userId];
-      setVisitedUsers(newVisitedUsers);
-      localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
-    }
+    // 訪問済みユーザー情報を更新
+    const newVisitedUsers = { 
+      ...visitedUsers,
+      [userId]: { 
+        visited: true, 
+        lastSeenUpdate: updatedAt 
+      }
+    };
+    
+    setVisitedUsers(newVisitedUsers);
+    localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
     
     // ローディング表示を一定時間後に解除（画面遷移のタイミングに合わせる）
     setTimeout(() => {
@@ -150,9 +179,12 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
             >
               <div className="flex-shrink-0 relative" onClick={(e) => e.stopPropagation()}>
                 {(() => {
-                  const isVisited = visitedUsers.includes(group.user_id);
+                  const isVisited = visitedUsers[group.user_id]?.visited || false;
+                  const hasNewContent = hasNewEvent(group.user_id, group.latest_updated_at);
                   const isLoading = loadingUserId === group.user_id;
-                  const borderStyle = isVisited 
+                  
+                  // ボーダースタイルの設定 - 新しいコンテンツがある場合はカラーボーダー
+                  const borderStyle = isVisited && !hasNewContent
                     ? 'border-2 border-gray-200' 
                     : 'p-[2px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600';
                   
@@ -163,7 +195,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
                     >
                       <Link 
                         href={`/other-calendar/${group.user_id}`}
-                        onClick={() => handleUserVisit(group.user_id)}
+                        onClick={() => handleUserVisit(group.user_id, group.latest_updated_at)}
                         className="relative inline-block w-full h-full"
                       >
                         <Avatar 
