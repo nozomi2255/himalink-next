@@ -2,6 +2,7 @@ import { useCalendar } from "@/contexts/calendar-context";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import Link from "next/link";
 
 interface RecentEvent {
   event_id: string;
@@ -70,24 +71,42 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
     return () => clearInterval(interval);
   }, [userId, supabase]);
 
-  // 表示するアバターのリスト
-  const avatarsToDisplay = recentAvatars.slice(0, 5);
+  // 同じユーザーIDのアバターは1つだけ表示する処理
+  const uniqueAvatars = recentAvatars.reduce<RecentEvent[]>((unique, event) => {
+    // すでに同じユーザーIDのアバターが追加されているか確認
+    const isUserIdExists = unique.some(item => item.user_id === event.user_id);
+    
+    // ユーザーIDが存在しない場合のみ追加
+    if (!isUserIdExists) {
+      unique.push(event);
+    }
+    
+    return unique;
+  }, []);
+  
+  // 表示するアバターのリスト（最大5件）
+  const avatarsToDisplay = uniqueAvatars.slice(0, 5);
 
   return (
     <div className="sticky flex-col top-0 z-[40] bg-white border-b border-gray-300 shadow-sm p-2">
       <div className="flex flex-row items-center justify-between px-2">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-bold m-0">{year}年 {month}</h2>
-          <div className="flex -space-x-2 ml-4">
+          <div className="flex ml-4">
             {avatarsToDisplay.map((event, index) => (
-              <Avatar 
-                key={`${event.event_id || index}`} 
-                className="inline-flex border-2 border-white"
-                style={{ width: '32px', height: '32px', zIndex: 10 - index }}
+              <Link 
+                key={`${event.user_id || index}`}
+                href={`/other-calendar/${event.user_id}`}
+                title="このユーザーのカレンダーを表示"
               >
-                <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
-                <AvatarFallback>ユ</AvatarFallback>
-              </Avatar>
+                <Avatar 
+                  className="inline-flex border-2 border-white hover:border-blue-400 transition-colors cursor-pointer"
+                  style={{ width: '32px', height: '32px', zIndex: 10 - index }}
+                >
+                  <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
+                  <AvatarFallback>ユ</AvatarFallback>
+                </Avatar>
+              </Link>
             ))}
             {isLoading && <div className="text-xs text-gray-500 ml-2">読込中...</div>}
             {!isLoading && avatarsToDisplay.length === 0 && !error && userId && (

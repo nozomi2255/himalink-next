@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 
 interface RecentEvent {
   event_id: string;
@@ -10,6 +11,12 @@ interface RecentEvent {
   updated_at: string;
   avatar_url: string;
   time_since_update: string;
+}
+
+interface GroupedEvents {
+  user_id: string;
+  avatar_url: string;
+  events: RecentEvent[];
 }
 
 interface RightSidebarProps {
@@ -35,6 +42,8 @@ const formatTimeSince = (timeSince: string) => {
 
 const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
   const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+  const [groupedEvents, setGroupedEvents] = useState<GroupedEvents[]>([]);
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
   const supabase = createClient();
 
   useEffect(() => {
@@ -52,6 +61,21 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
       }
 
       setRecentEvents(data || []);
+      
+      // イベントをユーザーごとにグループ化
+      const grouped: Record<string, GroupedEvents> = {};
+      (data || []).forEach((event: RecentEvent) => {
+        if (!grouped[event.user_id]) {
+          grouped[event.user_id] = {
+            user_id: event.user_id,
+            avatar_url: event.avatar_url,
+            events: []
+          };
+        }
+        grouped[event.user_id].events.push(event);
+      });
+      
+      setGroupedEvents(Object.values(grouped));
     };
 
     fetchRecentEvents();
@@ -61,6 +85,18 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
 
     return () => clearInterval(interval);
   }, [userId]);
+
+  const toggleExpand = (userId: string) => {
+    setExpandedUsers(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
+      } else {
+        newSet.add(userId);
+      }
+      return newSet;
+    });
+  };
 
   return (
     <div className="w-[200px] p-4 border-l border-gray-200 bg-gray-50 flex flex-col gap-4 hidden md:block">
@@ -77,17 +113,42 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ userId }) => {
 
       <div className="flex flex-col gap-3">
         <h3 className="font-semibold">直近の更新</h3>
-        {recentEvents.map((event) => (
-          <div key={event.event_id} className="flex gap-2.5 p-2 bg-white rounded-lg shadow-sm hover:bg-blue-50 cursor-pointer transition-colors">
-            <img 
-              src={event.avatar_url || "/default-avatar.png"} 
-              alt="ユーザーアバター" 
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div className="flex flex-col justify-center">
-              <div className="text-sm font-medium">{event.title}</div>
-              <div className="text-xs text-gray-500">{formatTimeSince(event.time_since_update)}</div>
+        {groupedEvents.map((group) => (
+          <div key={group.user_id} className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <div 
+              className="flex gap-2.5 p-2 hover:bg-blue-50 cursor-pointer transition-colors"
+              onClick={() => toggleExpand(group.user_id)}
+            >
+              <div className="flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                <Link href={`/other-calendar/${group.user_id}`}>
+                  <img 
+                    src={group.avatar_url || "/default-avatar.png"} 
+                    alt="ユーザーアバター" 
+                    className="w-10 h-10 rounded-full object-cover cursor-pointer"
+                  />
+                </Link>
+              </div>
+              <div className="flex flex-col justify-center flex-1">
+                <div className="text-sm font-medium whitespace-nowrap overflow-hidden text-ellipsis">
+                  {group.events[0].title}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatTimeSince(group.events[0].time_since_update)}
+                  {group.events.length > 1 && ` (他 ${group.events.length - 1} 件)`}
+                </div>
+              </div>
             </div>
+            
+            {expandedUsers.has(group.user_id) && group.events.length > 1 && (
+              <div className="pl-12 pr-2 pb-2">
+                {group.events.slice(1).map(event => (
+                  <div key={event.event_id} className="py-1.5 border-t border-gray-100">
+                    <div className="text-sm whitespace-nowrap overflow-hidden text-ellipsis">{event.title}</div>
+                    <div className="text-xs text-gray-500">{formatTimeSince(event.time_since_update)}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
         {recentEvents.length === 0 && (
