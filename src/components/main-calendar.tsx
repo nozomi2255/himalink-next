@@ -204,48 +204,61 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     return weekGroups;
   };
 
-  // 各イベントのバースタイルを計算する
+  // 各イベントのバースタイルを計算する（全日付で段を管理）
   const calculateEventBarStyles = () => {
     const allBarStyles: Array<BarStyle & { title: string, id: string }> = [];
-    
-    // イベントを日付でソート
-    const sortedEvents = [...events].sort((a, b) => 
+
+    const sortedEvents = [...events].sort((a, b) =>
       new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
     );
-    
-    // イベントの配置位置を追跡
-    const eventPositions: Record<string, number> = {};
+
+    const eventPositions: Record<string, Set<number>> = {}; // 各日付ごとに使われている段を管理
 
     sortedEvents.forEach(event => {
-      if (new Date(event.start_time).toDateString() !== new Date(event.end_time).toDateString()) {
-        // 複数日にまたがるイベント
-        const weekGroups = groupEventsByWeek(event);
-        
-        // このイベントの垂直位置を決定（既に配置されている位置を避ける）
-        const eventKey = `${event.start_time}-${event.end_time}`;
-        let position = 0;
-        while (eventPositions[`${eventKey}-${position}`]) {
-          position++;
-        }
-        eventPositions[`${eventKey}-${position}`] = 1;
-        
-        const eventBarStyles = weekGroups.map(weekDays => {
-          const firstDayEl = document.querySelector(`[data-date="${format(weekDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
-          const lastDayEl = document.querySelector(`[data-date="${format(weekDays[weekDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
+      const eventStart = startOfDay(new Date(event.start_time));
+      const eventEnd = startOfDay(new Date(event.end_time));
 
-          if (!firstDayEl || !lastDayEl) return null;
-
-          return {
-            top: `${firstDayEl.offsetTop + 24 + (position * 22)}px`, // 位置に基づいて垂直位置を変更
-            left: `${firstDayEl.offsetLeft}px`,
-            width: `${(lastDayEl.offsetLeft + lastDayEl.offsetWidth) - firstDayEl.offsetLeft}px`,
-            title: event.title,
-            id: event.id
-          };
-        }).filter((style): style is BarStyle & { title: string, id: string } => style !== null);
-
-        allBarStyles.push(...eventBarStyles);
+      // イベントがカバーするすべての日付を列挙
+      const daysCovered: string[] = [];
+      let currentDay = eventStart;
+      while (currentDay <= eventEnd) {
+        daysCovered.push(format(currentDay, "yyyy-MM-dd"));
+        currentDay = addDays(currentDay, 1);
       }
+
+      // すべての日付に対して、空いている段(position)を探す
+      let position = 0;
+      while (daysCovered.some(dateStr => eventPositions[dateStr]?.has(position))) {
+        position++;
+      }
+
+      // 選んだ段をすべての日付に予約する
+      daysCovered.forEach(dateStr => {
+        if (!eventPositions[dateStr]) {
+          eventPositions[dateStr] = new Set();
+        }
+        eventPositions[dateStr].add(position);
+      });
+
+      // スタイル計算（週をまたぐ場合は分割）
+      const weekGroups = groupEventsByWeek(event);
+
+      const eventBarStyles = weekGroups.map(weekDays => {
+        const firstDayEl = document.querySelector(`[data-date="${format(weekDays[0], "yyyy-MM-dd")}"]`) as HTMLElement;
+        const lastDayEl = document.querySelector(`[data-date="${format(weekDays[weekDays.length - 1], "yyyy-MM-dd")}"]`) as HTMLElement;
+
+        if (!firstDayEl || !lastDayEl) return null;
+
+        return {
+          top: `${firstDayEl.offsetTop + 24 + (position * 22)}px`,
+          left: `${firstDayEl.offsetLeft}px`,
+          width: `${(lastDayEl.offsetLeft + lastDayEl.offsetWidth) - firstDayEl.offsetLeft}px`,
+          title: event.title,
+          id: event.id
+        };
+      }).filter((style): style is BarStyle & { title: string, id: string } => style !== null);
+
+      allBarStyles.push(...eventBarStyles);
     });
 
     return allBarStyles;
@@ -428,11 +441,11 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     /* 1. カレンダー全体のコンテナ */
     <div className="relative h-full w-full overflow-y-auto overflow-x-hidden" ref={calendarRef} style={{ userSelect: dragStart ? 'none' : 'auto' }}>
       /* 2. 複数日イベントレイヤー */
-      <div className="absolute inset-0 pointer-events-none z-50">
+      <div className="absolute inset-0 pointer-events-none z-[30]">
         {barStyles.map((style, index) => (
           <div
             key={index}
-            className="absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] animate-fadeIn pointer-events-none"
+            className="absolute text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[20] animate-fadeIn pointer-events-none"
             style={style}
           >
             New Event
@@ -441,7 +454,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
         {eventBarStyles.map((style, index) => (
           <div
             key={`event-${style.id}-${index}`}
-            className="absolute text-white text-xs px-2 py-0.5 bg-blue-500 rounded-lg shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100] cursor-pointer pointer-events-auto"
+            className="absolute text-white text-xs px-2 py-0.5 bg-blue-500 rounded-lg shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[20] cursor-pointer pointer-events-auto"
             style={style}
             onClick={(e) => {
               e.stopPropagation();
@@ -517,39 +530,13 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
               }`}>
                 {format(day, "d")}
               </div>
-              {/* イベントの表示コンテナ（絶対位置） */}
-              <div className="absolute z-10 w-full box-border rounded-lg">
+              {/* イベントの表示コンテナ（absolute配置に統一のため1日イベント表示は削除） */}
+              <div className="absolute z-[5] w-full box-border rounded-lg">
                 {clickedDate === dateStr && (
-                  <div className="text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[100]">
+                  <div className="text-white text-xs px-2 py-0.5 bg-blue-200 rounded-lg italic shadow-md whitespace-nowrap overflow-hidden text-ellipsis z-[20]">
                     New Event
                   </div>
                 )}
-
-                {events
-                  .filter(event => {
-                    const eventStart = startOfDay(new Date(event.start_time));
-                    const eventEnd = startOfDay(new Date(event.end_time));
-                    const cellDay = startOfDay(day);
-                    // 複数日にまたがるイベントの場合は上部のバーで表示するので、ここではスキップ
-                    if (eventStart.toDateString() !== eventEnd.toDateString()) {
-                      return false;
-                    }
-                    return cellDay >= eventStart && cellDay <= eventEnd;
-                  })
-                  .map(event => (
-                    <div
-                      key={event.id}
-                      className="cursor-pointer rounded-lg bg-blue-500 text-white text-xs px-1 py-0.5 whitespace-nowrap overflow-hidden text-ellipsis"
-                      onClick={(e) => {
-                        setBarStyles([]); //barstyleをリセット
-                        setClickedDate(null); //clickedDateをリセット
-                        e.stopPropagation();
-                        eventClick && eventClick({ event: { id: event.id, title: event.title } });
-                      }}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
               </div>
             </div>
           );
