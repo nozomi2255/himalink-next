@@ -407,15 +407,7 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
     }
     const dayElement = document.querySelector(`[data-date="${dragStart}"]`) as HTMLElement;
     if (!dayElement) return;
-    const rect = dayElement.getBoundingClientRect();
-    let newPosition = { top: rect.top + window.scrollY + 50, left: rect.right + 100 };
-    if (dragStart) {
-      const dayOfWeek = new Date(dragStart).getDay();
-      if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
-        newPosition = { top: rect.top + window.scrollY + 50, left: rect.left - 100 }; // 左に表示
-      }
-    }
-    setModalPosition(newPosition);
+    setModalPositionForElement(dayElement);
 
     setDragStart(null);
     setDragEnd(null);
@@ -424,15 +416,26 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
   const handleDateClick = (dateStr: string) => {
     const dayElement = document.querySelector(`[data-date="${dateStr}"]`) as HTMLElement;
     if (!dayElement) return;
-    const rect = dayElement.getBoundingClientRect();
-    let newPosition = { top: rect.top + window.scrollY + 50, left: rect.right + 155 };
-    const dayOfWeek = new Date(dateStr).getDay();
-    if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
-      newPosition = { top: rect.top + window.scrollY + 50, left: rect.left - 155 }; // 左に表示
-    }
-    setModalPosition(newPosition);
+    setModalPositionForElement(dayElement);
     setClickedDate(dateStr);
     dateClick && dateClick({ dateStr });
+  };
+
+  // モーダルポジションを要素に基づいて設定するヘルパー関数
+  const setModalPositionForElement = (element: HTMLElement) => {
+    const rect = element.getBoundingClientRect();
+    let newPosition = { top: rect.top + window.scrollY + 50, left: rect.right + 155 };
+    
+    // 要素の日付から曜日を取得
+    const dateStr = element.getAttribute('data-date');
+    if (dateStr) {
+      const dayOfWeek = new Date(dateStr).getDay();
+      if (dayOfWeek === 4 || dayOfWeek === 5 || dayOfWeek === 6) { // 木、金、土
+        newPosition = { top: rect.top + window.scrollY + 50, left: rect.left - 155 }; // 左に表示
+      }
+    }
+    
+    setModalPosition(newPosition);
   };
 
   const days = weeks.flat();
@@ -458,6 +461,16 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
             style={style}
             onClick={(e) => {
               e.stopPropagation();
+              
+              // イベントが関連する日付の要素を見つける
+              const eventDate = new Date(events.find(event => event.id === style.id)?.start_time || new Date());
+              const dateStr = format(eventDate, "yyyy-MM-dd");
+              const dayElement = document.querySelector(`[data-date="${dateStr}"]`) as HTMLElement;
+              
+              if (dayElement) {
+                setModalPositionForElement(dayElement);
+              }
+              
               eventClick && eventClick({ event: { id: style.id, title: style.title } });
             }}
           >
