@@ -416,7 +416,7 @@ export function EventDialog({
 
     if (isMobile) {
         return (
-            <Sheet open={open} onOpenChange={onOpenChange}>
+            <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
                 <SheetContent side="bottom" className="h-[70%]" onOpenAutoFocus={(e) => e.preventDefault()}>
                     <SheetHeader>
                         <SheetTitle>
