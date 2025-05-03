@@ -1,7 +1,7 @@
 // EventDialog.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ja } from "date-fns/locale";
-import { CalendarIcon, Clock } from "lucide-react";
+import { CalendarIcon, Clock, GripHorizontal } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -74,7 +74,79 @@ export function EventDialog({
     const [endTime, setEndTime] = useState("00:00");
     const isMobile = useMediaQuery("(max-width: 768px)");
 
+    // シートの高さを管理するstate
+    const [sheetHeight, setSheetHeight] = useState(70);
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const dragStartYRef = useRef(0);
+    const startHeightRef = useRef(0);
+
     const supabase = createClient();
+
+    // ドラッグ開始時の処理
+    const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // タッチ操作時は特に慎重に処理
+        if ("touches" in e) {
+            e.stopPropagation();
+            document.body.style.overflow = "hidden"; // ボディのスクロールを無効化
+        }
+        
+        // マウスイベントとタッチイベントの両方に対応
+        const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        
+        dragStartYRef.current = clientY;
+        startHeightRef.current = sheetHeight;
+        
+        // イベントリスナーを追加
+        document.addEventListener("mousemove", handleDragMove, { passive: false });
+        document.addEventListener("touchmove", handleDragMove, { passive: false });
+        document.addEventListener("mouseup", handleDragEnd);
+        document.addEventListener("touchend", handleDragEnd);
+    };
+
+    // ドラッグ中の処理
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const clientY = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+        
+        const deltaY = dragStartYRef.current - clientY;
+        const windowHeight = window.innerHeight;
+        const deltaPercent = (deltaY / windowHeight) * 100;
+        
+        // 新しい高さを計算（上にドラッグすると大きく、下にドラッグすると小さく）
+        let newHeight = startHeightRef.current + deltaPercent;
+        
+        // 高さの制限（最小20%、最大90%）
+        newHeight = Math.max(20, Math.min(90, newHeight));
+        
+        setSheetHeight(newHeight);
+    };
+
+    // ドラッグ終了時の処理
+    const handleDragEnd = () => {
+        // ボディのスクロールを元に戻す
+        document.body.style.overflow = "";
+        
+        // イベントリスナーを削除
+        document.removeEventListener("mousemove", handleDragMove);
+        document.removeEventListener("touchmove", handleDragMove);
+        document.removeEventListener("mouseup", handleDragEnd);
+        document.removeEventListener("touchend", handleDragEnd);
+    };
+
+    // コンポーネントのアンマウント時にイベントリスナーを削除
+    useEffect(() => {
+        return () => {
+            document.removeEventListener("mousemove", handleDragMove);
+            document.removeEventListener("touchmove", handleDragMove);
+            document.removeEventListener("mouseup", handleDragEnd);
+            document.removeEventListener("touchend", handleDragEnd);
+        };
+    }, []);
 
     useEffect(() => {
         if (!entryId || !open) return;
@@ -417,8 +489,34 @@ export function EventDialog({
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
-                <SheetContent side="bottom" className="h-[70%]" onOpenAutoFocus={(e) => e.preventDefault()}>
-                    <SheetHeader>
+                <SheetContent 
+                    side="bottom" 
+                    className="rounded-t-xl overflow-hidden flex flex-col bg-white border-t border-x shadow-lg p-0"
+                    style={{ height: `${sheetHeight}vh` }}
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                    {/* ドラッグハンドル */}
+                    <div
+                        className="w-full py-2 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-gray-50"
+                        onMouseDown={handleDragStart}
+                        onTouchStart={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleDragStart(e);
+                        }}
+                        ref={sheetRef}
+                    >
+                        <div 
+                            className="w-16 h-4 bg-gray-300 rounded-full flex items-center justify-center"
+                            onTouchMove={(e) => e.preventDefault()}
+                        >
+                            <div className="w-10 h-1 bg-gray-400 rounded-full" />
+                        </div>
+                    </div>
+                    
+                    <SheetHeader className="px-4 py-2">
                         <SheetTitle>
                             <Input
                                 value={newTitle}
@@ -429,7 +527,9 @@ export function EventDialog({
                             />
                         </SheetTitle>
                     </SheetHeader>
-                    <EventContent />
+                    <div className="px-4 flex-1 overflow-y-auto">
+                        <EventContent />
+                    </div>
                 </SheetContent>
             </Sheet>
         );
