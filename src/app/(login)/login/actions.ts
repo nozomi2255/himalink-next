@@ -35,7 +35,7 @@ export async function login(formData: FormData) {
       redirect('/error')
     }
 
-    const userId = user.id;
+    userId = user.id;
 
   } catch (e: any) {
     // In case of an unexpected error, handle it appropriately

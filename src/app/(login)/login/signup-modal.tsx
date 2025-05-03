@@ -61,7 +61,7 @@ export default function SignupModal({ onClose }: SignupModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="top-50 sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">ひまリンクにサインアップ</DialogTitle>
           <DialogDescription>
