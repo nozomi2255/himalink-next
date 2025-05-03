@@ -19,6 +19,19 @@ export default function ProfileSetup() {
       throw new Error('ユーザーが見つかりません')
     }
 
+    // 既にUsersテーブルにデータが存在するか確認
+    const { data: existingUser } = await supabase
+      .from('Users')
+      .select('id')
+      .eq('id', user.id)
+      .single()
+
+    if (existingUser) {
+      // 既に登録済みの場合はmy-calendarに遷移
+      router.push('/my-calendar')
+      return
+    }
+
     const { error } = await supabase.from('Users').insert({
       id: user.id,
       email: user.email,
