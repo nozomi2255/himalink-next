@@ -15,6 +15,8 @@ export async function login(formData: FormData) {
     password: formData.get('password') as string,
   };
 
+  let userId: string | null = null;
+
   try {
     const { error } = await supabase.auth.signInWithPassword(data);
 
@@ -26,15 +28,37 @@ export async function login(formData: FormData) {
         redirect('/error');
       }
     }
+
+    // 認証成功 → user取得
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      redirect('/error')
+    }
+
+    const userId = user.id;
+
   } catch (e: any) {
     // In case of an unexpected error, handle it appropriately
     if (e instanceof Error && e.message.includes('Auth session missing')) {
       redirect('/login');
     } else {
-      redirect('/error');
+      redirect('/login/error');
     }
   }
 
+  // ここは try-catch の外なので throw redirect が安全
+  const { data: userData } = await supabase
+    .from('Users')
+    .select('id')
+    .eq('id', userId)
+    .single()
+
+  if (!userData) {
+    console.log('初回ログイン')
+    return redirect('/setup')
+  }
+
+  console.log('認証成功')
   revalidatePath('/', 'layout');
   redirect('/');
 }
@@ -56,7 +80,7 @@ export async function signup(formData: FormData) {
       if (error.message.includes('Auth session missing')) {
         redirect('/login');
       } else {
-        redirect('/error');
+        redirect('/login/error');
       }
 
     }
@@ -64,10 +88,10 @@ export async function signup(formData: FormData) {
     if (e instanceof Error && e.message.includes('Auth session missing')) {
       redirect('/login');
     } else {
-      redirect('/error');
+      redirect('/login/error');
     }
   }
 
   revalidatePath('/', 'layout');
-  redirect('/');
+  redirect('/login/signup-confirm');
 }
