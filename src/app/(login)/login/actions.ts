@@ -58,6 +58,7 @@ export async function signup(formData: FormData) {
       } else {
         redirect('/error');
       }
+
     }
   } catch (e: any) {
     if (e instanceof Error && e.message.includes('Auth session missing')) {
