@@ -6,7 +6,7 @@ import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
 import { useCalendar } from "@/contexts/calendar-context";
-
+import { CalendarTimelineSheet } from "@/components/calendar-timeline-sheet";
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
   currentUserId: string;
@@ -39,7 +39,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     } else if (data && data.length > 0) {
       setAvatarUrl(data[0].avatar_url);
       setUsername(data[0].username);
-      
+
       // ContextにもAvatarとUsernameを設定
       setContextAvatarUrl(data[0].avatar_url);
       setContextUsername(data[0].username);
@@ -75,6 +75,11 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     fetchAvatarUrl();
   }, [userId]); // userIdが変更されたときにも再取得
 
+  // eventsの値が変わったときに実行されるeffectを追加
+  useEffect(() => {
+    console.log("events updated:", events);
+  }, [events]);
+
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -84,7 +89,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
-    if(!dialogOpen) {
+    if (!dialogOpen) {
       setSelectedEventId("");
       setModalPosition({ top: 0, left: 0 }); // モーダル位置を初期化
       fetchEvents();
@@ -94,19 +99,18 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   // 日付がクリックされたときの処理
   const handleDateClick = (dateStr: string) => {
     setSelectedDate(dateStr);
-    setSelectedEventId(""); // 追加の場合はイベントIDは空にする
-    setSelectedEventTitle(""); // 追加の場合はタイトルは空にする
+    setSelectedEventId(""); 
+    setSelectedEventTitle("");
     setDialogOpen(true);
   };
 
   // イベントがクリックされたときの処理
   const handleEventClick = (arg: { event: { id: string, title: string } }) => {
-    setSelectedDate(""); // ← これ追加
-    setSelectedRange(null); // ← これも
+    setSelectedDate("");
+    setSelectedRange(null);
     setSelectedEventId(arg.event.id);
-    setSelectedEventTitle(arg.event.title); // クリックされたイベントのタイトルを設定
+    setSelectedEventTitle(arg.event.title);
     setDialogOpen(true);
-    console.log("isOwner:", isOwner)
   };
 
   const handleDragDateChange = ({ startDate, endDate }: { startDate: string; endDate: string }) => {
@@ -133,6 +137,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           isOwner={isOwner}
+          events={events}
           entryId={selectedEventId}
           targetUserId={userId}
           selectedStartDate={selectedRange?.startDate || ""}

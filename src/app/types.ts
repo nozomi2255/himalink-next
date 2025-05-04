@@ -1,5 +1,3 @@
-// src/app/types.ts
-
 // イベント（予定）の型定義
 export interface Event {
     id: string;           // UUID

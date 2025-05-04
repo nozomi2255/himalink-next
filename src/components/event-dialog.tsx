@@ -9,15 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { addDays, compareAsc, format, isSameDay, isToday, isTomorrow, isYesterday } from "date-fns";
 import { ja } from "date-fns/locale";
-import { CalendarIcon, Clock, GripHorizontal } from "lucide-react";
+import { CalendarIcon, Clock, GripHorizontal, Plus, ChevronUp, ChevronDown, MapPin, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { Save, Trash, Check } from "lucide-react";
+import { Save, Trash, Check, Users } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { Event } from "@/app/types";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 interface ReactionUser {
     user_id: string;
@@ -33,6 +38,7 @@ interface ReactionDetail {
 interface EventDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    events: Event[];
     entryId?: string;
     targetUserId?: string;
     isOwner: boolean;
@@ -46,11 +52,16 @@ function formatTime(datetime?: string) {
     return datetime.substring(11, 16); // UTCの "YYYY-MM-DDTHH:mm:ss" から "HH:mm" 抜き出し
 }
 
+function formatDateHeader(date: Date) {
+    return format(date, "M月d日（E）");
+}
+
 export function EventDialog({
     open,
     onOpenChange,
     entryId,
     targetUserId,
+    events,
     isOwner,
     selectedStartDate,
     selectedEndDate,
@@ -82,23 +93,28 @@ export function EventDialog({
 
     const supabase = createClient();
 
+    const [showAddForm, setShowAddForm] = useState(false)
+    const [addFormDate, setAddFormDate] = useState<Date | null>(null)
+    const [addFormTimeSlot, setAddFormTimeSlot] = useState<string | null>(null)
+    const scrollRef = useRef<HTMLDivElement>(null)
+
     // ドラッグ開始時の処理
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // タッチ操作時は特に慎重に処理
         if ("touches" in e) {
             e.stopPropagation();
             document.body.style.overflow = "hidden"; // ボディのスクロールを無効化
         }
-        
+
         // マウスイベントとタッチイベントの両方に対応
         const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-        
+
         dragStartYRef.current = clientY;
         startHeightRef.current = sheetHeight;
-        
+
         // イベントリスナーを追加
         document.addEventListener("mousemove", handleDragMove, { passive: false });
         document.addEventListener("touchmove", handleDragMove, { passive: false });
@@ -110,19 +126,19 @@ export function EventDialog({
     const handleDragMove = (e: MouseEvent | TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const clientY = "touches" in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-        
+
         const deltaY = dragStartYRef.current - clientY;
         const windowHeight = window.innerHeight;
         const deltaPercent = (deltaY / windowHeight) * 100;
-        
+
         // 新しい高さを計算（上にドラッグすると大きく、下にドラッグすると小さく）
         let newHeight = startHeightRef.current + deltaPercent;
-        
+
         // 高さの制限（最小20%、最大90%）
         newHeight = Math.max(20, Math.min(90, newHeight));
-        
+
         setSheetHeight(newHeight);
     };
 
@@ -130,7 +146,7 @@ export function EventDialog({
     const handleDragEnd = () => {
         // ボディのスクロールを元に戻す
         document.body.style.overflow = "";
-        
+
         // イベントリスナーを削除
         document.removeEventListener("mousemove", handleDragMove);
         document.removeEventListener("touchmove", handleDragMove);
@@ -148,6 +164,83 @@ export function EventDialog({
         };
     }, []);
 
+
+
+    // 日付ごとにイベントをグループ化
+    const groupedEvents = events?.reduce(
+        (groups: Record<string, Event[]>, event: Event) => {
+            const dateStr = format(event.start_time, "yyyy-MM-dd")
+            if (!groups[dateStr]) {
+                groups[dateStr] = []
+            }
+            groups[dateStr].push(event)
+            return groups
+        },
+        {} as Record<string, Event[]>,
+    ) || {}
+
+    // 予定がある日付のみの配列
+    const datesWithEvents = Object.keys(groupedEvents)
+        .map((dateStr) => new Date(dateStr))
+        .sort(compareAsc)
+
+    // 日付の配列を作成（今日を中心に前後の日付を含む）
+    const dateRange = Array.from({ length: 30 }, (_, i) => addDays(new Date(), i - 15))
+
+    // 日付ごとにソートされたイベントリスト
+    const sortedDates = dateRange.map((date) => {
+        const dateStr = format(date, "yyyy-MM-dd")
+        return {
+            date,
+            events: (groupedEvents[dateStr] || []).sort((a, b) => a.start_time.localeCompare(b.start_time)),
+        }
+    })
+
+    // 選択された日付またはイベントが変更されたときの処理
+    useEffect(() => {
+        if (entryId) {
+            // イベントが選択された場合、そのイベントの詳細を表示
+            setShowAddForm(false)
+
+            // 選択されたイベントの位置までスクロール
+            setTimeout(() => {
+                const eventElement = document.getElementById(`event-${entryId}`)
+                if (eventElement && scrollRef.current) {
+                    eventElement.scrollIntoView({ behavior: "smooth", block: "center" })
+                }
+            }, 100)
+        } else if (selectedStartDate) {
+            // 日付が選択された場合、その日付の位置までスクロール
+            setAddFormDate(selectedStartDate ? new Date(selectedStartDate) : null)
+
+            setTimeout(() => {
+                const dateElement = document.getElementById(`date-${format(selectedStartDate, "yyyy-MM-dd")}`)
+                if (dateElement && scrollRef.current) {
+                    dateElement.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+            }, 100)
+        }
+    }, [selectedStartDate, selectedEndDate])
+
+
+    // 予定追加フォームを閉じる
+    const handleCloseAddForm = () => {
+        setShowAddForm(false)
+    }
+
+    // 日付の表示形式を整形
+    const formatDateHeader = (date: Date) => {
+        if (isToday(date)) {
+            return `今日 (${format(date, "M/d")})`
+        } else if (isTomorrow(date)) {
+            return `明日 (${format(date, "M/d")})`
+        } else if (isYesterday(date)) {
+            return `昨日 (${format(date, "M/d")})`
+        } else {
+            return format(date, "yyyy年M月d日 (E)",)
+        }
+    }
+
     useEffect(() => {
         if (!entryId || !open) return;
         console.log("entryId:", entryId);
@@ -156,7 +249,7 @@ export function EventDialog({
             const { data: commentData } = await supabase.rpc("get_entry_comments", { p_entry_id: entryId });
             const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
             const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
-            
+
             const entry = entryData?.[0] ?? null;
             setEntry(entry);
             setNewTitle(entry?.title ?? "");
@@ -174,16 +267,16 @@ export function EventDialog({
             setComments(commentData ?? []);
             console.log("Reactions:", reactionData);
             setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
-            
+
             // リアクション詳細（ユーザー情報含む）の処理
             const detailsMap: Record<string, ReactionDetail> = {};
             const currentUserReactions: string[] = [];
-            
+
             if (reactionUsersData) {
                 // 現在のユーザーID（クライアント側から取得）
                 const { data: { user } } = await supabase.auth.getUser();
                 const currentUserId = user?.id;
-                
+
                 reactionUsersData.forEach((reaction: any) => {
                     if (!detailsMap[reaction.reaction_type]) {
                         detailsMap[reaction.reaction_type] = {
@@ -197,7 +290,7 @@ export function EventDialog({
                         username: reaction.username || reaction.user_id,
                         avatar_url: reaction.avatar_url
                     });
-                    
+
                     // 現在のユーザーがリアクションしているか確認
                     if (reaction.user_id === currentUserId && !currentUserReactions.includes(reaction.reaction_type)) {
                         currentUserReactions.push(reaction.reaction_type);
@@ -227,7 +320,7 @@ export function EventDialog({
             p_is_all_day: isAllDay,
             p_entry_type: "event",
         });
-    
+
         if (error) {
             console.error('RPC insert_entry error:', error);
         } else {
@@ -243,7 +336,7 @@ export function EventDialog({
             p_end_time: combineDateTime(endDate, endTime),
             p_is_all_day: isAllDay,
         });
-    
+
         if (error) {
             console.error('RPC update_entry error:', error);
         } else {
@@ -255,7 +348,7 @@ export function EventDialog({
         const { error } = await supabase.rpc('delete_entry', {
             p_id: entryId,
         });
-    
+
         if (error) {
             console.error('RPC delete_entry error:', error);
         } else {
@@ -265,7 +358,7 @@ export function EventDialog({
 
     const handleReactionToggle = async (emoji: string) => {
         if (!entryId) return;
-        
+
         try {
             // すでにリアクションしているか確認
             const { data: existingReaction } = await supabase.rpc('get_user_reaction', {
@@ -273,25 +366,25 @@ export function EventDialog({
                 p_reaction_type: emoji
             });
             console.log("get_user_reaction実行結果:", { existingReaction });
-            
+
             if (existingReaction && existingReaction.length > 0) {
                 // リアクションが存在する場合は削除         
                 const { error, data } = await supabase.rpc('delete_entry_reaction', {
                     p_entry_id: entryId,
                     p_reaction_type: emoji
                 });
-                
+
                 console.log("削除実行結果:", { error, data });
                 if (error) {
                     console.error("削除エラー詳細:", error);
                     throw error;
                 }
-                
+
                 console.log("削除されたリアクション数:", data?.[0]?.deleted_count || 0);
-                
+
                 // データを再取得して状態を更新
                 const { data: newReactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
-                
+
                 // 状態を更新（ユーザーのリアクションリストから削除）
                 setUserReactions(prev => prev.filter(r => r !== emoji));
             } else {
@@ -300,19 +393,19 @@ export function EventDialog({
                     p_entry_id: entryId,
                     p_reaction_type: emoji
                 });
-                
+
                 if (error) throw error;
-                
+
                 // 状態を更新（ユーザーのリアクションリストに追加）
                 setUserReactions(prev => [...prev, emoji]);
             }
-            
+
             // データを再取得
             const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
             const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
-            
+
             setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
-            
+
             // リアクション詳細の更新
             const detailsMap: Record<string, ReactionDetail> = {};
             if (reactionUsersData) {
@@ -430,13 +523,106 @@ export function EventDialog({
                     />
                     <Label htmlFor="all-day">終日</Label>
                 </div>
+
+                {/* タイムラインビュー */}
+                <ScrollArea className="flex-1" ref={scrollRef}>
+                    {/* タイムライン表示（予定がある日のみ） */}
+                    <div className="divide-y">
+                        {datesWithEvents.map((date) => {
+                            const dateStr = format(date, "yyyy-MM-dd")
+                            const eventsOnDate = groupedEvents[dateStr] || []
+
+                            return (
+                                <div key={dateStr} id={`date-${dateStr}`} className="py-2">
+                                    {/* 日付ヘッダー */}
+                                    <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
+                                        <h3 className="font-medium">{formatDateHeader(date)}</h3>
+                                    </div>
+
+                                    {/* イベントリスト */}
+                                    <div className="space-y-4 px-4 mt-2">
+                                        {eventsOnDate.map((event, index) => (
+                                            <div key={event.id} className="space-y-2">
+                                                {/* イベントカード */}
+                                                <div
+                                                    id={`event-${event.id}`}
+                                                    className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex items-start gap-2">
+                                                            <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
+                                                                {event.start_time}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium">{event.title}</div>
+                                                                {event.location && (
+                                                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                        <MapPin className="h-3 w-3" />
+                                                                        {event.location}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* 予定追加ボタン（イベントの間） */}
+                                                <div className="flex justify-center my-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 rounded-full text-xs text-muted-foreground"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                        }}
+                                                    >
+                                                        <Plus className="h-3 w-3 mr-1" />
+                                                        ここに予定を追加
+                                                    </Button>
+                                                </div>
+
+                                            </div>
+                                        ))}
+
+                                        {/* 最後のイベントの後に予定追加ボタン */}
+                                        {eventsOnDate.length > 0 && (
+                                            <div className="flex justify-center my-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 rounded-full text-xs text-muted-foreground"
+                                                
+                                                >
+                                                    <Plus className="h-3 w-3 mr-1" />
+                                                    ここに予定を追加
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {/* イベントがない場合 */}
+                                        {eventsOnDate.length === 0 && (
+                                            <div className="py-6 text-center text-muted-foreground">
+                                                <div className="mb-2">予定はありません</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )
+                        })}
+
+                        {datesWithEvents.length === 0 && (
+                            <div className="py-12 text-center text-muted-foreground">予定はありません</div>
+                        )}
+                    </div>
+                </ScrollArea>
+
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
                     <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
                             {["👍", "❤️", "😂", "🍻"].map((emoji) => (
                                 <div key={emoji} className="relative group">
-                                    <Button 
+                                    <Button
                                         variant={userReactions.includes(emoji) ? "default" : "outline"}
                                         size="sm"
                                         onClick={() => handleReactionToggle(emoji)}
@@ -489,8 +675,8 @@ export function EventDialog({
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
-                <SheetContent 
-                    side="bottom" 
+                <SheetContent
+                    side="bottom"
                     className="rounded-t-xl overflow-hidden flex flex-col bg-white border-t border-x shadow-lg p-0"
                     style={{ height: `${sheetHeight}vh` }}
                     onPointerDownOutside={(e) => e.preventDefault()}
@@ -508,14 +694,14 @@ export function EventDialog({
                         }}
                         ref={sheetRef}
                     >
-                        <div 
+                        <div
                             className="w-16 h-4 bg-gray-300 rounded-full flex items-center justify-center"
                             onTouchMove={(e) => e.preventDefault()}
                         >
                             <div className="w-10 h-1 bg-gray-400 rounded-full" />
                         </div>
                     </div>
-                    
+
                     <SheetHeader className="px-4 py-2">
                         <SheetTitle>
                             <Input
