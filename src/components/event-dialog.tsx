@@ -209,19 +209,64 @@ export function EventDialog({
                     eventElement.scrollIntoView({ behavior: "smooth", block: "center" })
                 }
             }, 100)
-        } else if (selectedStartDate) {
-            // 日付が選択された場合、その日付の位置までスクロール
-            setAddFormDate(selectedStartDate ? new Date(selectedStartDate) : null)
-
-            setTimeout(() => {
-                const dateElement = document.getElementById(`date-${format(selectedStartDate, "yyyy-MM-dd")}`)
-                if (dateElement && scrollRef.current) {
-                    dateElement.scrollIntoView({ behavior: "smooth", block: "start" })
-                }
-            }, 100)
+        } else if (selectedStartDate && !showAddForm) {
+            // 日付が選択された場合、予定追加フォームを表示して適切な位置までスクロール
+            const selectedDate = new Date(selectedStartDate)
+            setAddFormDate(selectedDate)
+            setStartDate(selectedDate)
+            setEndDate(selectedDate)
+            setShowAddForm(true)
         }
-    }, [selectedStartDate, selectedEndDate])
+    }, [entryId, selectedStartDate, selectedEndDate, showAddForm]);
 
+    // スクロール処理を分離して別のuseEffectで実行
+    useEffect(() => {
+        if (!addFormDate || !showAddForm || entryId) return;
+        
+        // 選択された日付のフォーマット
+        const selectedDateStr = format(addFormDate, "yyyy-MM-dd")
+        
+        setTimeout(() => {
+            // 選択された日付のブロックを探す
+            const dateElement = document.getElementById(`date-${selectedDateStr}`)
+            
+            if (dateElement && scrollRef.current) {
+                dateElement.scrollIntoView({ behavior: "smooth", block: "start" })
+            } else {
+                // 日付ブロックがない場合は、その日付が入るべき位置を見つける
+                // 既存のイベント日をソート
+                const sortedEventDates = datesWithEvents
+                    .map(date => format(date, "yyyy-MM-dd"))
+                    .sort()
+                
+                // 選択された日付の直前と直後の日付を特定
+                let nextDateStr = null
+                for (const eventDateStr of sortedEventDates) {
+                    if (eventDateStr > selectedDateStr) {
+                        nextDateStr = eventDateStr
+                        break
+                    }
+                }
+                
+                if (nextDateStr) {
+                    // 次の日付が見つかった場合、その位置までスクロール
+                    const nextDateElement = document.getElementById(`date-${nextDateStr}`)
+                    if (nextDateElement && scrollRef.current) {
+                        nextDateElement.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                } else {
+                    // 最後の日付より後の場合、最後の要素までスクロール
+                    const lastDateStr = sortedEventDates[sortedEventDates.length - 1]
+                    if (lastDateStr) {
+                        const lastDateElement = document.getElementById(`date-${lastDateStr}`)
+                        if (lastDateElement && scrollRef.current) {
+                            lastDateElement.scrollIntoView({ behavior: "smooth", block: "start" })
+                        }
+                    }
+                }
+            }
+        }, 100)
+    }, [addFormDate, showAddForm, entryId, datesWithEvents]);
 
     // 予定追加フォームを閉じる
     const handleCloseAddForm = () => {
@@ -528,89 +573,134 @@ export function EventDialog({
                 <ScrollArea className="flex-1" ref={scrollRef}>
                     {/* タイムライン表示（予定がある日のみ） */}
                     <div className="divide-y">
-                        {datesWithEvents.map((date) => {
-                            const dateStr = format(date, "yyyy-MM-dd")
-                            const eventsOnDate = groupedEvents[dateStr] || []
+                        {/* 既存の日付の配列を取得してソート */}
+                        {(() => {
+                            const allDates = [...datesWithEvents];
+                            
+                            // 選択された日付が存在し、追加フォームが表示されている場合は、その日付も含める
+                            if (showAddForm && addFormDate && !datesWithEvents.some(date => 
+                                format(date, "yyyy-MM-dd") === format(addFormDate, "yyyy-MM-dd")
+                            )) {
+                                allDates.push(addFormDate);
+                            }
+                            
+                            // 日付を昇順でソート
+                            return allDates.sort(compareAsc).map(date => {
+                                const dateStr = format(date, "yyyy-MM-dd");
+                                const eventsOnDate = groupedEvents[dateStr] || [];
+                                const isSelectedDate = addFormDate && format(addFormDate, "yyyy-MM-dd") === dateStr;
+                                
+                                return (
+                                    <div key={dateStr} id={`date-${dateStr}`} className="py-2">
+                                        {/* 日付ヘッダー */}
+                                        <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
+                                            <h3 className="font-medium">{formatDateHeader(date)}</h3>
+                                        </div>
 
-                            return (
-                                <div key={dateStr} id={`date-${dateStr}`} className="py-2">
-                                    {/* 日付ヘッダー */}
-                                    <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
-                                        <h3 className="font-medium">{formatDateHeader(date)}</h3>
-                                    </div>
-
-                                    {/* イベントリスト */}
-                                    <div className="space-y-4 px-4 mt-2">
-                                        {eventsOnDate.map((event, index) => (
-                                            <div key={event.id} className="space-y-2">
-                                                {/* イベントカード */}
-                                                <div
-                                                    id={`event-${event.id}`}
-                                                    className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
-                                                >
-                                                    <div className="flex justify-between items-start">
-                                                        <div className="flex items-start gap-2">
-                                                            <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
-                                                                {event.start_time}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-medium">{event.title}</div>
-                                                                {event.location && (
-                                                                    <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                                        <MapPin className="h-3 w-3" />
-                                                                        {event.location}
+                                        {/* イベントリスト */}
+                                        <div className="space-y-4 px-4 mt-2">
+                                            {/* 予定追加フォーム */}
+                                            {isSelectedDate && showAddForm && !entryId && (
+                                                <div className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <h4 className="text-sm font-medium text-blue-700">新規予定</h4>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={handleCloseAddForm}
+                                                            className="h-6 w-6 p-0"
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <div className="text-sm text-blue-700">
+                                                        上部のフォームに予定の詳細を入力してください
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {eventsOnDate.map((event, index) => (
+                                                <div key={event.id} className="space-y-2">
+                                                    {/* イベントカード */}
+                                                    <div
+                                                        id={`event-${event.id}`}
+                                                        className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
+                                                    >
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="flex items-start gap-2">
+                                                                    <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
+                                                                        {formatTime(event.start_time)}
                                                                     </div>
+                                                                    <div>
+                                                                        <div className="font-medium">{event.title}</div>
+                                                                        {event.location && (
+                                                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                                <MapPin className="h-3 w-3" />
+                                                                                {event.location}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {event.is_all_day && (
+                                                                    <Badge variant="outline" className="text-xs">終日</Badge>
                                                                 )}
                                                             </div>
+                                                            
+                                                            {!event.is_all_day && (
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* イベントの内容があれば表示 */}
+                                                            {event.content && (
+                                                                <div className="text-sm mt-1 border-t pt-2">
+                                                                    {event.content}
+                                                                </div>
+                                                            )}
+                                                            
+                                                            {/* 参加者数は型にないので表示しない */}
+                                                            {/* 
+                                                            {event.entry_type === "event" && event.participants_count > 0 && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                                                    <Users className="h-3 w-3" />
+                                                                    <span>{event.participants_count}人参加</span>
+                                                                </div>
+                                                            )}
+                                                            */}
+                                                            
+                                                            {/* リアクション情報は型にないので表示しない */}
+                                                            {/*
+                                                            {event.reactions && Object.keys(event.reactions).length > 0 && (
+                                                                <div className="flex gap-1 mt-1">
+                                                                    {Object.entries(event.reactions).map(([emoji, count]) => (
+                                                                        <Badge key={emoji} variant="secondary" className="text-xs gap-1">
+                                                                            {emoji} <span>{count}</span>
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            */}
                                                         </div>
                                                     </div>
                                                 </div>
+                                            ))}
 
-                                                {/* 予定追加ボタン（イベントの間） */}
-                                                <div className="flex justify-center my-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-6 rounded-full text-xs text-muted-foreground"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation()
-                                                        }}
-                                                    >
-                                                        <Plus className="h-3 w-3 mr-1" />
-                                                        ここに予定を追加
-                                                    </Button>
+                                            {/* イベントがない場合 */}
+                                            {eventsOnDate.length === 0 && !isSelectedDate && (
+                                                <div className="py-6 text-center text-muted-foreground">
+                                                    <div className="mb-2">予定はありません</div>
                                                 </div>
-
-                                            </div>
-                                        ))}
-
-                                        {/* 最後のイベントの後に予定追加ボタン */}
-                                        {eventsOnDate.length > 0 && (
-                                            <div className="flex justify-center my-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 rounded-full text-xs text-muted-foreground"
-                                                
-                                                >
-                                                    <Plus className="h-3 w-3 mr-1" />
-                                                    ここに予定を追加
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {/* イベントがない場合 */}
-                                        {eventsOnDate.length === 0 && (
-                                            <div className="py-6 text-center text-muted-foreground">
-                                                <div className="mb-2">予定はありません</div>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                );
+                            });
+                        })()}
 
-                        {datesWithEvents.length === 0 && (
+                        {datesWithEvents.length === 0 && !showAddForm && (
                             <div className="py-12 text-center text-muted-foreground">予定はありません</div>
                         )}
                     </div>
@@ -724,7 +814,7 @@ export function EventDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="w-[25%] max-w-xl"
+                className="w-[25%] max-w-xl h-[50vh] overflow-y-auto"
                 style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}
                 onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
