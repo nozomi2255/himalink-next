@@ -6,7 +6,6 @@ import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
 import { useCalendar } from "@/contexts/calendar-context";
-import { CalendarTimelineSheet } from "@/components/calendar-timeline-sheet";
 import type { UserProfile } from "@/app/types"
 
 interface CalendarViewProps {

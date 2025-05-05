@@ -2,7 +2,6 @@ import { useCalendar } from "@/contexts/calendar-context";
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 interface RecentEvent {
@@ -17,7 +16,7 @@ interface CalendarHeaderProps {
 }
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
-  const { currentMonth, userId } = useCalendar();
+  const { currentMonth, userId, setSelectedUserIdForDialog /* , openUserEventDialog */ } = useCalendar();
   const [recentAvatars, setRecentAvatars] = useState<RecentEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,10 +98,10 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
   // すべてのユニークなアバターを表示（最大件数の制限を削除）
   const avatarsToDisplay = uniqueAvatars;
 
-  // ユーザー訪問の記録
-  const handleUserVisit = (userId: string, updatedAt?: string) => {
-    setLoadingUserId(userId);
-    
+  // ユーザー訪問の記録 & ダイアログを開く
+  const handleAvatarClick = (userId: string, updatedAt?: string) => {
+    setLoadingUserId(userId); // ローディング表示は一旦残す（ダイアログ表示中に見せるか検討）
+
     // 訪問済みユーザー情報を更新
     const newVisitedUsers = { 
       ...visitedUsers,
@@ -114,6 +113,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
     
     setVisitedUsers(newVisitedUsers);
     localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
+
+    // コンテキストに選択されたユーザーIDを設定
+    setSelectedUserIdForDialog(userId); 
+
+    // TODO: イベントダイアログを開く処理を実装
+    console.log(`Set selected user ID in context: ${userId}`); // ログも更新
+
+    // ダイアログを開いた後、ローディング状態を解除する（適切なタイミングで）
+    // setLoadingUserId(null);
   };
 
   // ユーザーが新しいイベントを持っているかチェック
@@ -152,28 +160,23 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
               return (
                 <div 
                   key={`${event.user_id || index}`}
-                  className={`relative rounded-full ${borderStyle}`}
+                  className={`relative rounded-full cursor-pointer ${borderStyle}`}
                   style={{ width: '52px', height: '52px' }}
+                  onClick={() => handleAvatarClick(event.user_id, event.updated_at)}
+                  title="このユーザーのイベントを表示"
                 >
-                  <Link 
-                    href={`/other-calendar/${event.user_id}`}
-                    onClick={() => handleUserVisit(event.user_id, event.updated_at)}
-                    title="このユーザーのカレンダーを表示"
-                    className="relative inline-block w-full h-full"
+                  <Avatar 
+                    className={`inline-flex bg-white`}
+                    style={{ width: '48px', height: '48px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
                   >
-                    <Avatar 
-                      className={`inline-flex bg-white cursor-pointer`}
-                      style={{ width: '48px', height: '48px', position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
-                    >
-                      <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
-                      <AvatarFallback>ユ</AvatarFallback>
-                    </Avatar>
-                    {isLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20">
-                        <Loader2 className="h-5 w-5 text-white animate-spin" />
-                      </div>
-                    )}
-                  </Link>
+                    <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
+                    <AvatarFallback>ユ</AvatarFallback>
+                  </Avatar>
+                  {isLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20">
+                      <Loader2 className="h-5 w-5 text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
               );
             })}

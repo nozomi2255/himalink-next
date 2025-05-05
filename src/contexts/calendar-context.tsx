@@ -10,6 +10,8 @@ interface CalendarContextType {
   setAvatarUrl: (url: string | null) => void;
   username: string | null;
   setUsername: (name: string | null) => void;
+  selectedUserIdForDialog: string | null;
+  setSelectedUserIdForDialog: (id: string | null) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -21,6 +23,7 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [selectedUserIdForDialog, setSelectedUserIdForDialog] = useState<string | null>(null);
 
   return (
     <CalendarContext.Provider 
@@ -32,7 +35,9 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         avatarUrl,
         setAvatarUrl,
         username,
-        setUsername
+        setUsername,
+        selectedUserIdForDialog,
+        setSelectedUserIdForDialog
       }}
     >
       {children}
