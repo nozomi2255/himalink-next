@@ -308,9 +308,26 @@ const MainCalendar: React.FC<MainCalendarProps> = ({
         const firstMonth = monthList[0];
         const prevMonth = subMonths(firstMonth, 1);
         if (!monthList.some(m => format(m, "yyyy-MM") === format(prevMonth, "yyyy-MM"))) {
-          setMonthList(prev => [prevMonth, ...prev]);
-          // Maintain scroll position to prevent jump
-          container.scrollTop += container.scrollHeight;
+          // スクロール位置調整のための準備
+          const oldScrollHeight = container.scrollHeight;
+          const oldScrollTop = container.scrollTop;
+
+          setMonthList(prev => {
+            const newMonthList = [prevMonth, ...prev];
+            // 新しいリストがレンダリングされた後にスクロール位置を調整
+            // useEffectやrequestAnimationFrameを使うのがより確実
+            requestAnimationFrame(() => {
+              if (calendarRef.current) {
+                const newScrollHeight = calendarRef.current.scrollHeight;
+                // 増えた高さ分だけスクロール位置を上にずらす（加算する）
+                calendarRef.current.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+              }
+            });
+            return newMonthList;
+          });
+          // setMonthListのコールバックや別のuseEffectでscrollTopを調整する方がより堅牢
+          // ここでの直接的なscrollTop操作は削除または修正
+          // container.scrollTop += container.scrollHeight; // <-- この行を修正または削除
         }
       }
     };
