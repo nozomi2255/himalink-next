@@ -22,7 +22,6 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Event } from "@/app/types";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 
 interface ReactionUser {
     user_id: string;
@@ -552,186 +551,197 @@ export function EventDialog({
         }
     })
 
+    // --- New Effects --- 
+
+    // Effect 1: Manage Form Data based on entryId or selectedStartDate
     useEffect(() => {
-        if (!entryId || !open) {
-            // entryId がない場合やダイアログが閉じた場合は entry をクリア
-            // これにより、日付クリック時に wentFromEventToDate が正しく判定される
-            if (entry) {
-                 console.log('[fetchData Effect] Clearing entry state because entryId is null or dialog closed');
-                 setEntry(null);
-            }
-            return; 
+        console.log("[Form Data Effect] Triggered", { entryId, selectedStartDate });
+        if (entryId && entry) {
+            // Event selected: Populate form from entry state
+            console.log("[Form Data Effect] Populating from entry");
+            setNewTitle(entry.title ?? "");
+            setStartDate(entry.start_time ? new Date(entry.start_time) : undefined);
+            setStartTime(entry.start_time ? format(new Date(entry.start_time), "HH:mm") : "00:00");
+            setEndDate(entry.end_time ? new Date(entry.end_time) : undefined);
+            setEndTime(entry.end_time ? format(new Date(entry.end_time), "HH:mm") : "00:00");
+            setIsAllDay(entry.is_all_day ?? true);
+        } else if (!entryId && selectedStartDate) {
+            // Date selected: Reset form, set dates based on selectedStartDate
+            console.log("[Form Data Effect] Resetting for new date selection");
+            const selectedDate = new Date(selectedStartDate);
+            setNewTitle(""); // ★ Always reset title on date click for simplicity
+            setStartDate(selectedDate);
+            setStartTime("00:00");
+            setEndDate(selectedDate);
+            setEndTime("00:00");
+            setIsAllDay(true);
+            setAddFormDate(selectedDate); // Keep track of the date for the add form
+        } else {
+            // Neither selected: Potentially clear form (or do nothing if dialog closes)
+             console.log("[Form Data Effect] Clearing form (or no action)");
+            // setNewTitle("");
+            // setStartDate(undefined);
+            // setStartTime("00:00");
+            // setEndDate(undefined);
+            // setEndTime("00:00");
+            // setIsAllDay(true);
+             setAddFormDate(null); // Clear add form date marker
         }
-        console.log("[fetchData Effect Triggered]", { entryId }); // fetchData のログも残す
-        const fetchData = async () => {
-            const { data: entryData } = await supabase.rpc("get_entry_with_details", { p_entry_id: entryId });
-            const { data: commentData } = await supabase.rpc("get_entry_comments", { p_entry_id: entryId });
-            const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
-            const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
+    }, [entryId, selectedStartDate, entry]); // Depends on entryId, selectedStartDate, and entry state
 
-            const entry = entryData?.[0] ?? null;
-            setEntry(entry);
-            setNewTitle(entry?.title ?? "");
-            setIsAllDay(entry?.is_all_day ?? true);
-            if (entry?.start_time) {
-                const start = new Date(entry.start_time);
-                setStartDate(start);
-                setStartTime(format(start, "HH:mm"));
-            }
-            if (entry?.end_time) {
-                const end = new Date(entry.end_time);
-                setEndDate(end);
-                setEndTime(format(end, "HH:mm"));
-            }
-            setComments(commentData ?? []);
-            console.log("Reactions:", reactionData);
-            setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
-
-            // リアクション詳細（ユーザー情報含む）の処理
-            const detailsMap: Record<string, ReactionDetail> = {};
-            const currentUserReactions: string[] = [];
-
-            if (reactionUsersData) {
-                // 現在のユーザーID（クライアント側から取得）
-                const { data: { user } } = await supabase.auth.getUser();
-                const currentUserId = user?.id;
-
-                reactionUsersData.forEach((reaction: any) => {
-                    if (!detailsMap[reaction.reaction_type]) {
-                        detailsMap[reaction.reaction_type] = {
-                            count: 0,
-                            users: []
-                        };
-                    }
-                    detailsMap[reaction.reaction_type].count++;
-                    detailsMap[reaction.reaction_type].users.push({
-                        user_id: reaction.user_id,
-                        username: reaction.username || reaction.user_id,
-                        avatar_url: reaction.avatar_url
-                    });
-
-                    // 現在のユーザーがリアクションしているか確認
-                    if (reaction.user_id === currentUserId && !currentUserReactions.includes(reaction.reaction_type)) {
-                        currentUserReactions.push(reaction.reaction_type);
-                    }
-                });
-            }
-            setReactionDetails(detailsMap);
-            setUserReactions(currentUserReactions);
-        };
-        fetchData();
-    }, [entryId, open, supabase]);
-
+    // Effect 2: Manage Form Visibility (showAddForm)
     useEffect(() => {
-        // ★wentFromEventToDate フラグの計算方法を変更
-        const wentFromEventToDate = !entryId && !!entry; // 現在 entryId がなく、かつ entry データが存在する場合
+        console.log("[Visibility Effect] Triggered", { entryId, selectedStartDate });
+        if (entryId) {
+            // Event selected: Hide form
+            console.log("[Visibility Effect] Hiding form (event selected)");
+            setShowAddForm(false);
+        } else if (selectedStartDate) {
+            // Date selected: Show form
+            console.log("[Visibility Effect] Showing form (date selected)");
+            setShowAddForm(true);
+        } else {
+            // Neither selected: Hide form
+            console.log("[Visibility Effect] Hiding form (neither selected)");
+            setShowAddForm(false);
+        }
+    }, [entryId, selectedStartDate]); // Depends only on entryId and selectedStartDate
 
-        // ★デバッグ用ログ更新
-        console.log('[Effect Triggered]', {
-            currentEntryId: entryId,
-            selectedStartDate,
-            showAddForm,
-            addFormDate: addFormDate ? format(addFormDate, 'yyyy-MM-dd') : null,
-            entryExists: !!entry, // entry の存在有無をログに追加
-            wentFromEventToDate // フラグの値もログに出力
-        });
-
-        const isEventSelectedNow = !!entryId;
-        const isDateSelectedNow = !!selectedStartDate;
-
-        // ★デバッグ用ログ更新
-        console.log('[State Check]', { isEventSelectedNow, isDateSelectedNow, wentFromEventToDate });
-
-        if (isEventSelectedNow) {
-            // --- イベントが選択された場合の処理 ---
-            console.log('[Action] Event Selected Path');
-            // イベント選択時は必ずフォーム非表示にする
-            if (showAddForm) setShowAddForm(false);
-            // スクロール処理
+    // Effect 3: Manage Scrolling
+    useEffect(() => {
+        console.log("[Scroll Effect] Triggered", { entryId, addFormDate, showAddForm });
+        if (entryId) {
+            // Scroll to selected event
+            console.log("[Scroll Effect] Scrolling to event", entryId);
             setTimeout(() => {
                 const eventElement = document.getElementById(`event-${entryId}`);
                 if (eventElement && scrollRef.current) {
                     eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
                 }
             }, 100);
-
-        } else if (isDateSelectedNow) {
-            // --- 日付が選択された場合の処理 ---
-            console.log('[Action] Date Selected Path');
-            const selectedDate = new Date(selectedStartDate);
-            const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-            const shouldShowForm = !showAddForm || (addFormDate && format(addFormDate, "yyyy-MM-dd") !== selectedDateStr);
-
-            if (shouldShowForm || wentFromEventToDate) { // wentFromEventToDate でもフォーム表示/状態更新を行う
-                console.log('[Action] Showing/Updating Add Form');
-                setAddFormDate(selectedDate);
-                setStartDate(selectedDate);
-                setEndDate(selectedDate);
-
-                // ★リセットロジックで wentFromEventToDate フラグを使用
-                if (wentFromEventToDate) {
-                    console.log('[Reset Logic] Event -> Date: Resetting Title & DateTime');
-                    setNewTitle("");
-                    setStartTime("00:00");
-                    setEndTime("00:00");
-                    setIsAllDay(true);
-                    // フォームを強制的に表示状態にする
-                    if (!showAddForm) setShowAddForm(true);
+        } else if (showAddForm && addFormDate) {
+            // Scroll to the date where the add form is shown
+            const dateStr = format(addFormDate, "yyyy-MM-dd");
+            console.log("[Scroll Effect] Scrolling to date", dateStr);
+            setTimeout(() => {
+                if (!scrollRef.current) return;
+                const dateElement = document.getElementById(`date-${dateStr}`);
+                if (dateElement) {
+                    dateElement.scrollIntoView({ behavior: "smooth", block: "center" });
                 } else {
-                    console.log('[Reset Logic] Date -> Date or Initial: Resetting DateTime only');
-                    // タイトルは維持 (newTitle は変更しない)
-                    setStartTime("00:00");
-                    setEndTime("00:00");
-                    setIsAllDay(true);
-                    // 新規日付クリックならフォーム表示
-                    if (shouldShowForm && !showAddForm) setShowAddForm(true);
-                }
-            } else {
-                 console.log('[Action] Add Form Already Shown for this date');
-            }
-
-            // スクロール処理 (フォームが表示されている場合のみ)
-            if (showAddForm || wentFromEventToDate) {
-                setTimeout(() => {
-                    if (!scrollRef.current) return;
-                    const dateElement = document.getElementById(`date-${selectedDateStr}`);
-                    if (dateElement) {
-                        dateElement.scrollIntoView({ behavior: "smooth", block: "center" });
-                    } else {
-                        // フォールバック処理
-                        const sortedEventDates = datesWithEvents.map(date => format(date, "yyyy-MM-dd")).sort();
-                        let nextDateStr: string | null = null;
-                        for (const eventDateStr of sortedEventDates) {
-                            if (eventDateStr > selectedDateStr) {
-                                nextDateStr = eventDateStr;
-                                break;
-                            }
+                    // Fallback scroll logic (if date element doesn't exist yet)
+                    console.log("[Scroll Effect] Date element not found, using fallback");
+                    const sortedEventDates = datesWithEvents.map(d => format(d, "yyyy-MM-dd")).sort();
+                    let nextDateStr: string | null = null;
+                    for (const eventDateStr of sortedEventDates) {
+                        if (eventDateStr > dateStr) {
+                            nextDateStr = eventDateStr;
+                            break;
                         }
-                        if (nextDateStr) {
-                            const nextDateElement = document.getElementById(`date-${nextDateStr}`);
-                            if (nextDateElement) {
-                                nextDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
-                            }
-                        } else {
-                            const lastDateStr = sortedEventDates[sortedEventDates.length - 1];
-                            if (lastDateStr) {
-                                const lastDateElement = document.getElementById(`date-${lastDateStr}`);
-                                if (lastDateElement) {
-                                    lastDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
-                                }
+                    }
+                    if (nextDateStr) {
+                        const nextDateElement = document.getElementById(`date-${nextDateStr}`);
+                        if (nextDateElement) {
+                            nextDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                        }
+                    } else {
+                        const lastDateStr = sortedEventDates[sortedEventDates.length - 1];
+                        if (lastDateStr) {
+                            const lastDateElement = document.getElementById(`date-${lastDateStr}`);
+                            if (lastDateElement) {
+                                lastDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
                             }
                         }
                     }
-                }, 100);
-            }
-        } else {
-             console.log('[Action] Neither Event nor Date Selected');
-             // イベントも日付も選択されていない場合、フォームを閉じるのが自然かもしれない
-             if (showAddForm) setShowAddForm(false);
+                }
+            }, 100);
+        }
+    }, [entryId, addFormDate, showAddForm, datesWithEvents, scrollRef]); // Dependencies for scrolling logic
+
+    // Effect 4: Fetch Data (Adjusted slightly for clarity)
+    useEffect(() => {
+        if (!open) {
+            // Dialog closed: Clear entry state
+            if (entry) setEntry(null);
+            return;
         }
 
-    // ★依存配列に entry, entryId を追加
-    }, [entryId, selectedStartDate, datesWithEvents, showAddForm, addFormDate, scrollRef, entry]);
+        if (!entryId) {
+            // No event selected: Clear entry state
+            if (entry) {
+                console.log('[Fetch Data Effect] Clearing entry state because entryId is null');
+                setEntry(null);
+            }
+            return;
+        }
+        
+        console.log("[Fetch Data Effect] Triggered for entryId:", entryId);
+        let isMounted = true; // Flag to prevent state update on unmounted component
+        const fetchData = async () => {
+            try {
+                // Fetch all data related to the entry
+                const [entryResult, commentResult, reactionResult, reactionUsersResult] = await Promise.all([
+                    supabase.rpc("get_entry_with_details", { p_entry_id: entryId }),
+                    supabase.rpc("get_entry_comments", { p_entry_id: entryId }),
+                    supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId }),
+                    supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId })
+                ]);
+
+                if (!isMounted) return; // Exit if component unmounted during fetch
+
+                // Process entry data
+                const fetchedEntry = entryResult.data?.[0] ?? null;
+                setEntry(fetchedEntry); // Update entry state first
+
+                // Process comments
+                setComments(commentResult.data ?? []);
+
+                // Process reactions summary
+                setReactions(Object.fromEntries((reactionResult.data ?? []).map((r: any) => [r.reaction_type, r.count])));
+
+                // Process reaction details and user reactions
+                const detailsMap: Record<string, ReactionDetail> = {};
+                const currentUserReactionsSet = new Set<string>();
+                const { data: { user } } = await supabase.auth.getUser(); // Fetch current user inside async
+                const currentUserId = user?.id;
+
+                if (reactionUsersResult.data) {
+                    reactionUsersResult.data.forEach((reaction: any) => {
+                        if (!detailsMap[reaction.reaction_type]) {
+                            detailsMap[reaction.reaction_type] = { count: 0, users: [] };
+                        }
+                        detailsMap[reaction.reaction_type].count++;
+                        detailsMap[reaction.reaction_type].users.push({
+                            user_id: reaction.user_id,
+                            username: reaction.username || reaction.user_id,
+                            avatar_url: reaction.avatar_url
+                        });
+                        if (reaction.user_id === currentUserId) {
+                            currentUserReactionsSet.add(reaction.reaction_type);
+                        }
+                    });
+                }
+                setReactionDetails(detailsMap);
+                setUserReactions(Array.from(currentUserReactionsSet));
+
+            } catch (error) { // Add error handling
+                console.error("[Fetch Data Effect] Error fetching data:", error);
+                 if (!isMounted) return;
+                 // Optionally reset state on error
+                 setEntry(null);
+                 setComments([]);
+                 setReactions({});
+                 setReactionDetails({});
+                 setUserReactions([]);
+            }
+        };
+
+        fetchData();
+
+        return () => {
+            isMounted = false; // Cleanup function to set flag on unmount
+        };
+    }, [entryId, open, supabase]); // Dependencies for fetching data
 
     const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
         if (!date) return undefined;
