@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { addDays, compareAsc, format, isSameDay, isToday, isTomorrow, isYesterday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { toZonedTime, format as formatTz } from 'date-fns-tz';
-import { CalendarIcon, Clock, GripHorizontal, Plus, ChevronUp, ChevronDown, MapPin, X } from "lucide-react";
+import { CalendarIcon, Clock, GripHorizontal, Plus, ChevronUp, ChevronDown, MapPin, X, Pencil } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check, Users } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -103,6 +103,9 @@ interface EventContentProps {
     formatDateHeader: (date: Date) => string;
     formatTime: (datetime?: string) => string;
     targetUserProfile?: UserProfile;
+    editingEventId: string | null;
+    handleEditClick: (eventId: string) => void;
+    handleCancelEdit: () => void;
 }
 
 const MemoizedEventContent = memo<EventContentProps>(({ 
@@ -138,7 +141,10 @@ const MemoizedEventContent = memo<EventContentProps>(({
     scrollRef,
     formatDateHeader,
     formatTime,
-    targetUserProfile
+    targetUserProfile,
+    editingEventId,
+    handleEditClick,
+    handleCancelEdit
 }) => {
     return (
         <>
@@ -167,7 +173,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                         </div>
 
                                         <div className="space-y-4 px-4 mt-2">
-                                            {isSelectedDate && showAddForm && !entryId && (
+                                            {isSelectedDate && showAddForm && !editingEventId && !entryId && (
                                                 <div
                                                     key={`add-form-${dateStr}`}
                                                     className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50"
@@ -277,45 +283,131 @@ const MemoizedEventContent = memo<EventContentProps>(({
 
                                             {eventsOnDate.map((event, index) => (
                                                 <div key={event.id} className="space-y-2">
-                                                    <div
-                                                        id={`event-${event.id}`}
-                                                        className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
-                                                    >
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="flex items-start gap-2">
-                                                                    <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
-                                                                        {formatTime(event.start_time)}
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-medium">{event.title}</div>
-                                                                        {event.location && (
-                                                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                                                <MapPin className="h-3 w-3" />
-                                                                                {event.location}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                {event.is_all_day && (
-                                                                    <Badge variant="outline" className="text-xs">終日</Badge>
+                                                    {editingEventId === event.id ? (
+                                                        <div className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50">
+                                                            <div className={cn("flex justify-end", isMobile && "mb-4")}>
+                                                                {isOwner && (
+                                                                    <>
+                                                                        <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                                                            <Save className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button onClick={handleDelete} variant="ghost" size="icon">
+                                                                            <Trash className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button onClick={handleCancelEdit} variant="ghost" size="icon">
+                                                                            <X className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </>
                                                                 )}
                                                             </div>
-
-                                                            {!event.is_all_day && (
-                                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                                            <DebouncedInput
+                                                                value={newTitle}
+                                                                onChange={handleTitleChange}
+                                                                placeholder="イベントタイトルを入力"
+                                                                className="w-full mt-2"
+                                                                autoFocus={false}
+                                                                debounceTime={50}
+                                                            />
+                                                            <div className="flex flex-col gap-2 mt-2">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                            <Button
+                                                                                variant={"outline"}
+                                                                                className={cn(
+                                                                                    "w-[100px] justify-start text-left font-normal",
+                                                                                    !startDate && "text-muted-foreground"
+                                                                                )}
+                                                                            >
+                                                                                {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日</span>}
+                                                                            </Button>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0">
+                                                                            <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                    {!isAllDay && (
+                                                                        <DebouncedInput type="time" value={startTime} onChange={handleStartTimeChange} className="w-[120px]" debounceTime={50} />
+                                                                    )}
                                                                 </div>
-                                                            )}
-
-                                                            {event.content && (
-                                                                <div className="text-sm mt-1 border-t pt-2">
-                                                                    {event.content}
+                                                                <div className="flex items-center gap-2">
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                            <Button
+                                                                                variant={"outline"}
+                                                                                className={cn(
+                                                                                    "w-[100px] justify-start text-left font-normal",
+                                                                                    !endDate && "text-muted-foreground"
+                                                                                )}
+                                                                            >
+                                                                                {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日</span>}
+                                                                            </Button>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-auto p-0">
+                                                                            <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                    {!isAllDay && (
+                                                                        <DebouncedInput type="time" value={endTime} onChange={handleEndTimeChange} className="w-[120px]" debounceTime={50} />
+                                                                    )}
                                                                 </div>
-                                                            )}
+                                                            </div>
+                                                            <div className="flex items-center space-x-2 mt-2">
+                                                                <Switch id={`all-day-edit-${event.id}`} checked={isAllDay} onCheckedChange={setIsAllDay} />
+                                                                <Label htmlFor={`all-day-edit-${event.id}`}>終日</Label>
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    ) : (
+                                                        <div
+                                                            id={`event-${event.id}`}
+                                                            className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm relative group`}
+                                                        >
+                                                            {isOwner && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                                                    onClick={() => handleEditClick(event.id)}
+                                                                >
+                                                                    <Pencil className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                            <div className="flex flex-col gap-2">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
+                                                                            {formatTime(event.start_time)}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div className="font-medium">{event.title}</div>
+                                                                            {event.location && (
+                                                                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                                    <MapPin className="h-3 w-3" />
+                                                                                    {event.location}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    {event.is_all_day && (
+                                                                        <Badge variant="outline" className="text-xs">終日</Badge>
+                                                                    )}
+                                                                </div>
+
+                                                                {!event.is_all_day && (
+                                                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                        <Clock className="h-3 w-3" />
+                                                                        {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                                                    </div>
+                                                                )}
+
+                                                                {event.content && (
+                                                                    <div className="text-sm mt-1 border-t pt-2">
+                                                                        {event.content}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
 
@@ -451,6 +543,7 @@ export function EventDialog({
     const [showAddForm, setShowAddForm] = useState(false)
     const [addFormDate, setAddFormDate] = useState<Date | null>(null)
     const scrollRef = useRef<HTMLDivElement | null>(null)
+    const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
@@ -725,8 +818,9 @@ export function EventDialog({
     };
 
     const handleUpdate = async () => {
+        if (!editingEventId) return;
         const { error } = await supabase.rpc('update_entry', {
-            p_id: entryId,
+            p_id: editingEventId,
             p_title: newTitle,
             p_start_time: combineDateTime(startDate, startTime),
             p_end_time: combineDateTime(endDate, endTime),
@@ -736,18 +830,23 @@ export function EventDialog({
         if (error) {
             console.error('RPC update_entry error:', error);
         } else {
+            setEditingEventId(null);
             onOpenChange(false);
         }
     };
 
     const handleDelete = async () => {
+        const eventIdToDelete = editingEventId || entryId;
+        if (!eventIdToDelete) return;
+
         const { error } = await supabase.rpc('delete_entry', {
-            p_id: entryId,
+            p_id: eventIdToDelete,
         });
 
         if (error) {
             console.error('RPC delete_entry error:', error);
         } else {
+            setEditingEventId(null);
             onOpenChange(false);
         }
     };
@@ -830,6 +929,48 @@ export function EventDialog({
         setEndTime(value);
     }, []);
 
+    const handleEditClick = (eventId: string) => {
+        const eventToEdit = events.find(e => e.id === eventId);
+        if (!eventToEdit) return;
+
+        setEditingEventId(eventId);
+        setShowAddForm(false);
+
+        setNewTitle(eventToEdit.title ?? "");
+        setStartDate(eventToEdit.start_time ? new Date(eventToEdit.start_time) : undefined);
+        setStartTime(eventToEdit.start_time ? format(new Date(eventToEdit.start_time), "HH:mm") : "00:00");
+        setEndDate(eventToEdit.end_time ? new Date(eventToEdit.end_time) : undefined);
+        setEndTime(eventToEdit.end_time ? format(new Date(eventToEdit.end_time), "HH:mm") : "00:00");
+        setIsAllDay(eventToEdit.is_all_day ?? true);
+
+        setTimeout(() => {
+            const eventElement = document.getElementById(`event-${eventId}`);
+             if (eventElement && scrollRef.current) {
+                 eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
+             }
+        }, 100);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingEventId(null);
+        if (selectedStartDate) {
+             const selectedDate = new Date(selectedStartDate);
+             setNewTitle("");
+             setStartDate(selectedDate);
+             setStartTime("00:00");
+             setEndDate(selectedDate);
+             setEndTime("00:00");
+             setIsAllDay(true);
+        } else {
+             setNewTitle("");
+             setStartDate(undefined);
+             setStartTime("00:00");
+             setEndDate(undefined);
+             setEndTime("00:00");
+             setIsAllDay(true);
+        }
+    };
+
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
@@ -898,6 +1039,9 @@ export function EventDialog({
                             formatDateHeader={formatDateHeader}
                             formatTime={formatTime}
                             targetUserProfile={targetUserProfile}
+                            editingEventId={editingEventId}
+                            handleEditClick={handleEditClick}
+                            handleCancelEdit={handleCancelEdit}
                         />
                     </div>
                 </SheetContent>
@@ -948,6 +1092,9 @@ export function EventDialog({
                         formatDateHeader={formatDateHeader}
                         formatTime={formatTime}
                         targetUserProfile={targetUserProfile}
+                        editingEventId={editingEventId}
+                        handleEditClick={handleEditClick}
+                        handleCancelEdit={handleCancelEdit}
                     />
                 </DialogHeader>
             </DialogContent>
