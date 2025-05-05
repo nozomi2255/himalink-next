@@ -9,19 +9,21 @@ import { Button } from "@/components/ui/button";
 import { DebouncedInput } from "@/components/ui/debounced-input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { addDays, compareAsc, format, isSameDay, isToday, isTomorrow, isYesterday } from "date-fns";
 import { ja } from "date-fns/locale";
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
 import { CalendarIcon, Clock, GripHorizontal, Plus, ChevronUp, ChevronDown, MapPin, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { Save, Trash, Check, Users } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Event } from "@/app/types";
+import { Event, UserProfile } from "@/app/types";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ReactionUser {
     user_id: string;
@@ -44,23 +46,34 @@ interface EventDialogProps {
     selectedStartDate?: string;
     selectedEndDate?: string;
     modalPosition?: { top: number; left: number };
+    targetUserProfile?: UserProfile;
 }
 
-function formatTime(datetime?: string) {
+function formatTime(datetime?: string, timeZone: string = 'Asia/Tokyo') {
     if (!datetime) return "-";
-    return datetime.substring(11, 16); // UTCの "YYYY-MM-DDTHH:mm:ss" から "HH:mm" 抜き出し
+    try {
+        const date = new Date(datetime);
+        if (isNaN(date.getTime())) {
+             console.error("Invalid date string provided to formatTime:", datetime);
+             return "-";
+        }
+        const zonedDate = toZonedTime(date, timeZone);
+        return formatTz(zonedDate, 'HH:mm', { timeZone, locale: ja });
+    } catch (error) {
+        console.error("Error formatting time:", error, "Input:", datetime);
+        return "-";
+    }
 }
 
 function formatDateHeader(date: Date) {
     return format(date, "M月d日（E）");
 }
 
-// EventContentProps の型定義を追加
 interface EventContentProps {
     isMobile: boolean;
     isOwner: boolean;
     entryId?: string;
-    entry: any; // entry の型をより具体的にするか、any のままにするか検討
+    entry: any;
     events: Event[];
     groupedEvents: Record<string, Event[]>;
     datesWithEvents: Date[];
@@ -89,9 +102,9 @@ interface EventContentProps {
     scrollRef: React.RefObject<HTMLDivElement | null>;
     formatDateHeader: (date: Date) => string;
     formatTime: (datetime?: string) => string;
+    targetUserProfile?: UserProfile;
 }
 
-// EventContent をメモ化されたコンポーネントとして定義
 const MemoizedEventContent = memo<EventContentProps>(({ 
     isMobile, 
     isOwner, 
@@ -124,29 +137,24 @@ const MemoizedEventContent = memo<EventContentProps>(({
     comments,
     scrollRef,
     formatDateHeader,
-    formatTime
+    formatTime,
+    targetUserProfile
 }) => {
-    // EventContent の中身をここに移動
     return (
         <>
             <div className="flex flex-col gap-4">
 
-                {/* タイムラインビュー */}
                 <ScrollArea className="flex-1" ref={scrollRef}>
-                    {/* タイムライン表示（予定がある日のみ） */}
                     <div className="divide-y">
-                        {/* 既存の日付の配列を取得してソート */}
                         {(() => {
                             const allDates = [...datesWithEvents];
 
-                            // 選択された日付が存在し、追加フォームが表示されている場合は、その日付も含める
                             if (showAddForm && addFormDate && !datesWithEvents.some(date =>
                                 format(date, "yyyy-MM-dd") === format(addFormDate, "yyyy-MM-dd")
                             )) {
                                 allDates.push(addFormDate);
                             }
 
-                            // 日付を昇順でソート
                             return allDates.sort(compareAsc).map(date => {
                                 const dateStr = format(date, "yyyy-MM-dd");
                                 const eventsOnDate = groupedEvents[dateStr] || [];
@@ -154,14 +162,11 @@ const MemoizedEventContent = memo<EventContentProps>(({
 
                                 return (
                                     <div key={dateStr} id={`date-${dateStr}`} className="py-2">
-                                        {/* 日付ヘッダー */}
                                         <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
                                             <h3 className="font-medium">{formatDateHeader(date)}</h3>
                                         </div>
 
-                                        {/* イベントリスト */}
                                         <div className="space-y-4 px-4 mt-2">
-                                            {/* 予定追加フォーム */}
                                             {isSelectedDate && showAddForm && !entryId && (
                                                 <div
                                                     key={`add-form-${dateStr}`}
@@ -272,7 +277,6 @@ const MemoizedEventContent = memo<EventContentProps>(({
 
                                             {eventsOnDate.map((event, index) => (
                                                 <div key={event.id} className="space-y-2">
-                                                    {/* イベントカード */}
                                                     <div
                                                         id={`event-${event.id}`}
                                                         className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
@@ -305,41 +309,16 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                 </div>
                                                             )}
 
-                                                            {/* イベントの内容があれば表示 */}
                                                             {event.content && (
                                                                 <div className="text-sm mt-1 border-t pt-2">
                                                                     {event.content}
                                                                 </div>
                                                             )}
-
-                                                            {/* 参加者数は型にないので表示しない */}
-                                                            {/* 
-                                                            {event.entry_type === "event" && event.participants_count > 0 && (
-                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                                                    <Users className="h-3 w-3" />
-                                                                    <span>{event.participants_count}人参加</span>
-                                                                </div>
-                                                            )}
-                                                            */}
-
-                                                            {/* リアクション情報は型にないので表示しない */}
-                                                            {/*
-                                                            {event.reactions && Object.keys(event.reactions).length > 0 && (
-                                                                <div className="flex gap-1 mt-1">
-                                                                    {Object.entries(event.reactions).map(([emoji, count]) => (
-                                                                        <Badge key={emoji} variant="secondary" className="text-xs gap-1">
-                                                                            {emoji} <span>{count}</span>
-                                                                        </Badge>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            */}
                                                         </div>
                                                     </div>
                                                 </div>
                                             ))}
 
-                                            {/* イベントがない場合 */}
                                             {eventsOnDate.length === 0 && !isSelectedDate && (
                                                 <div className="py-6 text-center text-muted-foreground">
                                                     <div className="mb-2">予定はありません</div>
@@ -356,6 +335,24 @@ const MemoizedEventContent = memo<EventContentProps>(({
                         )}
                     </div>
                 </ScrollArea>
+
+                {targetUserProfile && (
+                    <Card className="mt-4">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Avatar>
+                                    <AvatarImage src={targetUserProfile.avatarUrl || undefined} alt={targetUserProfile.username || 'User Avatar'} />
+                                    <AvatarFallback>{targetUserProfile.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                                </Avatar>
+                                {targetUserProfile.username || 'ユーザー'}
+                            </CardTitle>
+                            <CardDescription>プロフィール</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p>{targetUserProfile.bio || '自己紹介はありません。'}</p>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
@@ -424,8 +421,9 @@ export function EventDialog({
     selectedStartDate,
     selectedEndDate,
     modalPosition = { top: 100, left: 100 },
+    targetUserProfile,
 }: EventDialogProps) {
-    const [entry, setEntry] = useState<any>(null);
+    const [entry, setEntry] = useState<Event | null>(null);
     const [comments, setComments] = useState<any[]>([]);
     const [reactions, setReactions] = useState<Record<string, number>>({});
     const [reactionDetails, setReactionDetails] = useState<Record<string, ReactionDetail>>({});
@@ -443,7 +441,6 @@ export function EventDialog({
     const [endTime, setEndTime] = useState("00:00");
     const isMobile = useMediaQuery("(max-width: 768px)");
 
-    // シートの高さを管理するstate
     const [sheetHeight, setSheetHeight] = useState(70);
     const sheetRef = useRef<HTMLDivElement>(null);
     const dragStartYRef = useRef(0);
@@ -455,31 +452,26 @@ export function EventDialog({
     const [addFormDate, setAddFormDate] = useState<Date | null>(null)
     const scrollRef = useRef<HTMLDivElement | null>(null)
 
-    // ドラッグ開始時の処理
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
 
-        // タッチ操作時は特に慎重に処理
         if ("touches" in e) {
             e.stopPropagation();
-            document.body.style.overflow = "hidden"; // ボディのスクロールを無効化
+            document.body.style.overflow = "hidden";
         }
 
-        // マウスイベントとタッチイベントの両方に対応
         const clientY = "touches" in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
 
         dragStartYRef.current = clientY;
         startHeightRef.current = sheetHeight;
 
-        // イベントリスナーを追加
         document.addEventListener("mousemove", handleDragMove, { passive: false });
         document.addEventListener("touchmove", handleDragMove, { passive: false });
         document.addEventListener("mouseup", handleDragEnd);
         document.addEventListener("touchend", handleDragEnd);
     };
 
-    // ドラッグ中の処理
     const handleDragMove = (e: MouseEvent | TouchEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -490,28 +482,22 @@ export function EventDialog({
         const windowHeight = window.innerHeight;
         const deltaPercent = (deltaY / windowHeight) * 100;
 
-        // 新しい高さを計算（上にドラッグすると大きく、下にドラッグすると小さく）
         let newHeight = startHeightRef.current + deltaPercent;
 
-        // 高さの制限（最小20%、最大90%）
         newHeight = Math.max(20, Math.min(90, newHeight));
 
         setSheetHeight(newHeight);
     };
 
-    // ドラッグ終了時の処理
     const handleDragEnd = () => {
-        // ボディのスクロールを元に戻す
         document.body.style.overflow = "";
 
-        // イベントリスナーを削除
         document.removeEventListener("mousemove", handleDragMove);
         document.removeEventListener("touchmove", handleDragMove);
         document.removeEventListener("mouseup", handleDragEnd);
         document.removeEventListener("touchend", handleDragEnd);
     };
 
-    // コンポーネントのアンマウント時にイベントリスナーを削除
     useEffect(() => {
         return () => {
             document.removeEventListener("mousemove", handleDragMove);
@@ -521,7 +507,6 @@ export function EventDialog({
         };
     }, []);
 
-    // 日付ごとにイベントをグループ化
     const groupedEvents = events?.reduce(
         (groups: Record<string, Event[]>, event: Event) => {
             const dateStr = format(event.start_time, "yyyy-MM-dd")
@@ -534,15 +519,12 @@ export function EventDialog({
         {} as Record<string, Event[]>,
     ) || {}
 
-    // 予定がある日付のみの配列
     const datesWithEvents = Object.keys(groupedEvents)
         .map((dateStr) => new Date(dateStr))
         .sort(compareAsc)
 
-    // 日付の配列を作成（今日を中心に前後の日付を含む）
     const dateRange = Array.from({ length: 30 }, (_, i) => addDays(new Date(), i - 15))
 
-    // 日付ごとにソートされたイベントリスト
     const sortedDates = dateRange.map((date) => {
         const dateStr = format(date, "yyyy-MM-dd")
         return {
@@ -551,13 +533,9 @@ export function EventDialog({
         }
     })
 
-    // --- New Effects --- 
-
-    // Effect 1: Manage Form Data based on entryId or selectedStartDate
     useEffect(() => {
         console.log("[Form Data Effect] Triggered", { entryId, selectedStartDate });
         if (entryId && entry) {
-            // Event selected: Populate form from entry state
             console.log("[Form Data Effect] Populating from entry");
             setNewTitle(entry.title ?? "");
             setStartDate(entry.start_time ? new Date(entry.start_time) : undefined);
@@ -566,52 +544,38 @@ export function EventDialog({
             setEndTime(entry.end_time ? format(new Date(entry.end_time), "HH:mm") : "00:00");
             setIsAllDay(entry.is_all_day ?? true);
         } else if (!entryId && selectedStartDate) {
-            // Date selected: Reset form, set dates based on selectedStartDate
             console.log("[Form Data Effect] Resetting for new date selection");
             const selectedDate = new Date(selectedStartDate);
-            setNewTitle(""); // ★ Always reset title on date click for simplicity
+            setNewTitle("");
             setStartDate(selectedDate);
             setStartTime("00:00");
             setEndDate(selectedDate);
             setEndTime("00:00");
             setIsAllDay(true);
-            setAddFormDate(selectedDate); // Keep track of the date for the add form
+            setAddFormDate(selectedDate);
         } else {
-            // Neither selected: Potentially clear form (or do nothing if dialog closes)
              console.log("[Form Data Effect] Clearing form (or no action)");
-            // setNewTitle("");
-            // setStartDate(undefined);
-            // setStartTime("00:00");
-            // setEndDate(undefined);
-            // setEndTime("00:00");
-            // setIsAllDay(true);
-             setAddFormDate(null); // Clear add form date marker
+             setAddFormDate(null);
         }
-    }, [entryId, selectedStartDate, entry]); // Depends on entryId, selectedStartDate, and entry state
+    }, [entryId, selectedStartDate, entry]);
 
-    // Effect 2: Manage Form Visibility (showAddForm)
     useEffect(() => {
         console.log("[Visibility Effect] Triggered", { entryId, selectedStartDate });
         if (entryId) {
-            // Event selected: Hide form
             console.log("[Visibility Effect] Hiding form (event selected)");
             setShowAddForm(false);
         } else if (selectedStartDate) {
-            // Date selected: Show form
             console.log("[Visibility Effect] Showing form (date selected)");
             setShowAddForm(true);
         } else {
-            // Neither selected: Hide form
             console.log("[Visibility Effect] Hiding form (neither selected)");
             setShowAddForm(false);
         }
-    }, [entryId, selectedStartDate]); // Depends only on entryId and selectedStartDate
+    }, [entryId, selectedStartDate]);
 
-    // Effect 3: Manage Scrolling
     useEffect(() => {
         console.log("[Scroll Effect] Triggered", { entryId, addFormDate, showAddForm });
         if (entryId) {
-            // Scroll to selected event
             console.log("[Scroll Effect] Scrolling to event", entryId);
             setTimeout(() => {
                 const eventElement = document.getElementById(`event-${entryId}`);
@@ -620,7 +584,6 @@ export function EventDialog({
                 }
             }, 100);
         } else if (showAddForm && addFormDate) {
-            // Scroll to the date where the add form is shown
             const dateStr = format(addFormDate, "yyyy-MM-dd");
             console.log("[Scroll Effect] Scrolling to date", dateStr);
             setTimeout(() => {
@@ -629,7 +592,6 @@ export function EventDialog({
                 if (dateElement) {
                     dateElement.scrollIntoView({ behavior: "smooth", block: "center" });
                 } else {
-                    // Fallback scroll logic (if date element doesn't exist yet)
                     console.log("[Scroll Effect] Date element not found, using fallback");
                     const sortedEventDates = datesWithEvents.map(d => format(d, "yyyy-MM-dd")).sort();
                     let nextDateStr: string | null = null;
@@ -656,18 +618,15 @@ export function EventDialog({
                 }
             }, 100);
         }
-    }, [entryId, addFormDate, showAddForm, datesWithEvents, scrollRef]); // Dependencies for scrolling logic
+    }, [entryId, addFormDate, showAddForm, datesWithEvents, scrollRef]);
 
-    // Effect 4: Fetch Data (Adjusted slightly for clarity)
     useEffect(() => {
         if (!open) {
-            // Dialog closed: Clear entry state
             if (entry) setEntry(null);
             return;
         }
 
         if (!entryId) {
-            // No event selected: Clear entry state
             if (entry) {
                 console.log('[Fetch Data Effect] Clearing entry state because entryId is null');
                 setEntry(null);
@@ -676,10 +635,9 @@ export function EventDialog({
         }
         
         console.log("[Fetch Data Effect] Triggered for entryId:", entryId);
-        let isMounted = true; // Flag to prevent state update on unmounted component
+        let isMounted = true;
         const fetchData = async () => {
             try {
-                // Fetch all data related to the entry
                 const [entryResult, commentResult, reactionResult, reactionUsersResult] = await Promise.all([
                     supabase.rpc("get_entry_with_details", { p_entry_id: entryId }),
                     supabase.rpc("get_entry_comments", { p_entry_id: entryId }),
@@ -687,22 +645,18 @@ export function EventDialog({
                     supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId })
                 ]);
 
-                if (!isMounted) return; // Exit if component unmounted during fetch
+                if (!isMounted) return;
 
-                // Process entry data
                 const fetchedEntry = entryResult.data?.[0] ?? null;
-                setEntry(fetchedEntry); // Update entry state first
+                setEntry(fetchedEntry);
 
-                // Process comments
                 setComments(commentResult.data ?? []);
 
-                // Process reactions summary
                 setReactions(Object.fromEntries((reactionResult.data ?? []).map((r: any) => [r.reaction_type, r.count])));
 
-                // Process reaction details and user reactions
                 const detailsMap: Record<string, ReactionDetail> = {};
                 const currentUserReactionsSet = new Set<string>();
-                const { data: { user } } = await supabase.auth.getUser(); // Fetch current user inside async
+                const { data: { user } } = await supabase.auth.getUser();
                 const currentUserId = user?.id;
 
                 if (reactionUsersResult.data) {
@@ -724,10 +678,9 @@ export function EventDialog({
                 setReactionDetails(detailsMap);
                 setUserReactions(Array.from(currentUserReactionsSet));
 
-            } catch (error) { // Add error handling
+            } catch (error) {
                 console.error("[Fetch Data Effect] Error fetching data:", error);
                  if (!isMounted) return;
-                 // Optionally reset state on error
                  setEntry(null);
                  setComments([]);
                  setReactions({});
@@ -739,15 +692,18 @@ export function EventDialog({
         fetchData();
 
         return () => {
-            isMounted = false; // Cleanup function to set flag on unmount
+            isMounted = false;
         };
-    }, [entryId, open, supabase]); // Dependencies for fetching data
+    }, [entryId, open, supabase]);
 
     const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
         if (!date) return undefined;
-        const [hours, minutes] = time.split(":");
-        const newDate = new Date(date);
-        newDate.setHours(parseInt(hours), parseInt(minutes));
+        const [hours, minutes] = time.split(':');
+        const newDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), parseInt(hours), parseInt(minutes));
+        if (isNaN(newDate.getTime())) {
+            console.error("Invalid date/time combination:", date, time);
+            return undefined;
+        }
         return newDate.toISOString();
     };
 
@@ -800,7 +756,6 @@ export function EventDialog({
         if (!entryId) return;
 
         try {
-            // すでにリアクションしているか確認
             const { data: existingReaction } = await supabase.rpc('get_user_reaction', {
                 p_entry_id: entryId,
                 p_reaction_type: emoji
@@ -808,7 +763,6 @@ export function EventDialog({
             console.log("get_user_reaction実行結果:", { existingReaction });
 
             if (existingReaction && existingReaction.length > 0) {
-                // リアクションが存在する場合は削除         
                 const { error, data } = await supabase.rpc('delete_entry_reaction', {
                     p_entry_id: entryId,
                     p_reaction_type: emoji
@@ -822,13 +776,10 @@ export function EventDialog({
 
                 console.log("削除されたリアクション数:", data?.[0]?.deleted_count || 0);
 
-                // データを再取得して状態を更新
                 const { data: newReactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
 
-                // 状態を更新（ユーザーのリアクションリストから削除）
                 setUserReactions(prev => prev.filter(r => r !== emoji));
             } else {
-                // リアクションが存在しない場合は追加
                 const { error } = await supabase.rpc('add_entry_reaction', {
                     p_entry_id: entryId,
                     p_reaction_type: emoji
@@ -836,17 +787,14 @@ export function EventDialog({
 
                 if (error) throw error;
 
-                // 状態を更新（ユーザーのリアクションリストに追加）
                 setUserReactions(prev => [...prev, emoji]);
             }
 
-            // データを再取得
             const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
             const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
 
             setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
 
-            // リアクション詳細の更新
             const detailsMap: Record<string, ReactionDetail> = {};
             if (reactionUsersData) {
                 reactionUsersData.forEach((reaction: any) => {
@@ -874,7 +822,6 @@ export function EventDialog({
         setNewTitle(value);
     }, []);
 
-    // 時間入力用のハンドラー
     const handleStartTimeChange = useCallback((value: string) => {
         setStartTime(value);
     }, []);
@@ -894,7 +841,6 @@ export function EventDialog({
                     onInteractOutside={(e) => e.preventDefault()}
                     onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                    {/* ドラッグハンドル */}
                     <div
                         className="w-full py-2 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing bg-gray-50"
                         onMouseDown={handleDragStart}
@@ -918,7 +864,6 @@ export function EventDialog({
                         </SheetTitle>
                     </SheetHeader>
                     <div className="px-4 flex-1 overflow-y-auto">
-                        {/* MemoizedEventContent を使用 */}
                         <MemoizedEventContent 
                             isMobile={isMobile}
                             isOwner={isOwner}
@@ -952,6 +897,7 @@ export function EventDialog({
                             scrollRef={scrollRef}
                             formatDateHeader={formatDateHeader}
                             formatTime={formatTime}
+                            targetUserProfile={targetUserProfile}
                         />
                     </div>
                 </SheetContent>
@@ -968,7 +914,6 @@ export function EventDialog({
                 <DialogHeader>
                     <DialogTitle>
                     </DialogTitle>
-                    {/* MemoizedEventContent を使用 */}
                     <MemoizedEventContent
                         isMobile={isMobile}
                         isOwner={isOwner}
@@ -1002,6 +947,7 @@ export function EventDialog({
                         scrollRef={scrollRef}
                         formatDateHeader={formatDateHeader}
                         formatTime={formatTime}
+                        targetUserProfile={targetUserProfile}
                     />
                 </DialogHeader>
             </DialogContent>

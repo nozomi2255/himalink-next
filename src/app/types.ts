@@ -43,3 +43,9 @@ export interface Event {
     updated_at: string;
   };
   // フォロワーやフォロー中のリストを表す場合は、UserRecord の配列を利用することが一般的です
+
+  export type UserProfile = {
+    avatarUrl: string | null;
+    username: string | null;
+    bio: string | null;
+  };

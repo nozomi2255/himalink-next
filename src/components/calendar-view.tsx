@@ -7,6 +7,8 @@ import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
 import { useCalendar } from "@/contexts/calendar-context";
 import { CalendarTimelineSheet } from "@/components/calendar-timeline-sheet";
+import type { UserProfile } from "@/app/types"
+
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
   currentUserId: string;
@@ -16,8 +18,11 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   const { setUserId, setAvatarUrl: setContextAvatarUrl, setUsername: setContextUsername } = useCalendar();
   const [events, setEvents] = useState<Event[]>([]);
   const isOwner = !userId || userId === currentUserId;
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [username, setUsername] = useState<string>("");
+  const [userProfile, setUserProfile] = useState<UserProfile>({
+    avatarUrl: null,
+    username: "",
+    bio: "",
+  });
   const supabase = createClient();
 
   // ContextにユーザーIDを設定
@@ -27,22 +32,31 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     }
   }, [currentUserId, setUserId]);
 
-  //AvatarUrlを取得
-  const fetchAvatarUrl = async () => {
-    console.log("userId:", userId)
-    const { data, error } = await supabase.rpc("get_user_avatar", {
-      user_id: userId,
+  // プロフィール情報の取得
+  const fetchUserProfile = async () => {
+    console.log("userId:", userId);
+
+    const { data, error } = await supabase.rpc("get_user_profile_by_id", {
+      target_user_id: userId,
     });
 
     if (error) {
-      console.error("Failed to fetch user avatar info:", error.message);
-    } else if (data && data.length > 0) {
-      setAvatarUrl(data[0].avatar_url);
-      setUsername(data[0].username);
+      console.error("Failed to fetch user profile info:", error.message);
+      return;
+    }
 
-      // ContextにもAvatarとUsernameを設定
-      setContextAvatarUrl(data[0].avatar_url);
-      setContextUsername(data[0].username);
+    if (data && data.length > 0) {
+      const { avatar_url, username, bio } = data[0];
+
+      setUserProfile({
+        avatarUrl: avatar_url,
+        username,
+        bio,
+      });
+
+      // Contextにも設定
+      setContextAvatarUrl(avatar_url);
+      setContextUsername(username);
     }
   };
 
@@ -72,7 +86,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
 
   useEffect(() => {
     fetchEvents();
-    fetchAvatarUrl();
+    fetchUserProfile();
   }, [userId]); // userIdが変更されたときにも再取得
 
   // eventsの値が変わったときに実行されるeffectを追加
@@ -99,7 +113,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   // 日付がクリックされたときの処理
   const handleDateClick = (dateStr: string) => {
     setSelectedDate(dateStr);
-    setSelectedEventId(""); 
+    setSelectedEventId("");
     setSelectedEventTitle("");
     setDialogOpen(true);
   };
@@ -140,6 +154,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           events={events}
           entryId={selectedEventId}
           targetUserId={userId}
+          targetUserProfile={userProfile}
           selectedStartDate={selectedRange?.startDate || ""}
           selectedEndDate={selectedRange?.endDate || ""}
           modalPosition={modalPosition}
