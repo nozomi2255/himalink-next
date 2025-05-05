@@ -1,12 +1,12 @@
 // EventDialog.tsx
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, memo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DebouncedInput } from "@/components/ui/debounced-input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -56,6 +56,365 @@ function formatDateHeader(date: Date) {
     return format(date, "M月d日（E）");
 }
 
+// EventContentProps の型定義を追加
+interface EventContentProps {
+    isMobile: boolean;
+    isOwner: boolean;
+    entryId?: string;
+    entry: any; // entry の型をより具体的にするか、any のままにするか検討
+    events: Event[];
+    groupedEvents: Record<string, Event[]>;
+    datesWithEvents: Date[];
+    showAddForm: boolean;
+    addFormDate: Date | null;
+    newTitle: string;
+    handleTitleChange: (value: string) => void;
+    startDate: Date | undefined;
+    setStartDate: (date: Date | undefined) => void;
+    startTime: string;
+    handleStartTimeChange: (value: string) => void;
+    endDate: Date | undefined;
+    setEndDate: (date: Date | undefined) => void;
+    endTime: string;
+    handleEndTimeChange: (value: string) => void;
+    isAllDay: boolean;
+    setIsAllDay: (value: boolean) => void;
+    handleUpdate: () => void;
+    handleDelete: () => void;
+    handleAdd: () => void;
+    handleReactionToggle: (emoji: string) => void;
+    userReactions: string[];
+    reactions: Record<string, number>;
+    reactionDetails: Record<string, ReactionDetail>;
+    comments: any[];
+    scrollRef: React.RefObject<HTMLDivElement | null>;
+    formatDateHeader: (date: Date) => string;
+    formatTime: (datetime?: string) => string;
+}
+
+// EventContent をメモ化されたコンポーネントとして定義
+const MemoizedEventContent = memo<EventContentProps>(({ 
+    isMobile, 
+    isOwner, 
+    entryId, 
+    entry,
+    events,
+    groupedEvents,
+    datesWithEvents,
+    showAddForm,
+    addFormDate,
+    newTitle,
+    handleTitleChange,
+    startDate,
+    setStartDate,
+    startTime,
+    handleStartTimeChange,
+    endDate,
+    setEndDate,
+    endTime,
+    handleEndTimeChange,
+    isAllDay,
+    setIsAllDay,
+    handleUpdate,
+    handleDelete,
+    handleAdd,
+    handleReactionToggle,
+    userReactions,
+    reactions,
+    reactionDetails,
+    comments,
+    scrollRef,
+    formatDateHeader,
+    formatTime
+}) => {
+    // EventContent の中身をここに移動
+    return (
+        <>
+            <div className="flex flex-col gap-4">
+
+                {/* タイムラインビュー */}
+                <ScrollArea className="flex-1" ref={scrollRef}>
+                    {/* タイムライン表示（予定がある日のみ） */}
+                    <div className="divide-y">
+                        {/* 既存の日付の配列を取得してソート */}
+                        {(() => {
+                            const allDates = [...datesWithEvents];
+
+                            // 選択された日付が存在し、追加フォームが表示されている場合は、その日付も含める
+                            if (showAddForm && addFormDate && !datesWithEvents.some(date =>
+                                format(date, "yyyy-MM-dd") === format(addFormDate, "yyyy-MM-dd")
+                            )) {
+                                allDates.push(addFormDate);
+                            }
+
+                            // 日付を昇順でソート
+                            return allDates.sort(compareAsc).map(date => {
+                                const dateStr = format(date, "yyyy-MM-dd");
+                                const eventsOnDate = groupedEvents[dateStr] || [];
+                                const isSelectedDate = addFormDate && format(addFormDate, "yyyy-MM-dd") === dateStr;
+
+                                return (
+                                    <div key={dateStr} id={`date-${dateStr}`} className="py-2">
+                                        {/* 日付ヘッダー */}
+                                        <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
+                                            <h3 className="font-medium">{formatDateHeader(date)}</h3>
+                                        </div>
+
+                                        {/* イベントリスト */}
+                                        <div className="space-y-4 px-4 mt-2">
+                                            {/* 予定追加フォーム */}
+                                            {isSelectedDate && showAddForm && !entryId && (
+                                                <div
+                                                    key={`add-form-${dateStr}`}
+                                                    className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50"
+                                                >
+                                                    <div className={cn("flex justify-end", isMobile && "mb-4")}>
+                                                        {isOwner && (
+                                                            entryId ? (
+                                                                <>
+                                                                    <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                                                        <Save className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button onClick={handleDelete} variant="ghost" size="icon">
+                                                                        <Trash className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            ) : (
+                                                                <Button onClick={handleAdd} variant="ghost" size="icon">
+                                                                    <Check className="h-4 w-4" />
+                                                                </Button>
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    <DebouncedInput
+                                                        value={newTitle}
+                                                        onChange={handleTitleChange}
+                                                        placeholder="イベントタイトルを入力"
+                                                        className="w-full mt-2"
+                                                        autoFocus={false}
+                                                        debounceTime={50}
+                                                    />
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        variant={"outline"}
+                                                                        className={cn(
+                                                                            "w-[100px] justify-start text-left font-normal",
+                                                                            !startDate && "text-muted-foreground"
+                                                                        )}
+                                                                    >
+                                                                        {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0">
+                                                                    <Calendar
+                                                                        mode="single"
+                                                                        selected={startDate}
+                                                                        onSelect={setStartDate}
+                                                                        initialFocus
+                                                                    />
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                            {!isAllDay && (
+                                                                <DebouncedInput
+                                                                    type="time"
+                                                                    value={startTime}
+                                                                    onChange={handleStartTimeChange}
+                                                                    className="w-[120px]"
+                                                                    debounceTime={50}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button
+                                                                        variant={"outline"}
+                                                                        className={cn(
+                                                                            "w-[100px] justify-start text-left font-normal",
+                                                                            !endDate && "text-muted-foreground"
+                                                                        )}
+                                                                    >
+                                                                        {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-auto p-0">
+                                                                    <Calendar
+                                                                        mode="single"
+                                                                        selected={endDate}
+                                                                        onSelect={setEndDate}
+                                                                        initialFocus
+                                                                    />
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                            {!isAllDay && (
+                                                                <DebouncedInput
+                                                                    type="time"
+                                                                    value={endTime}
+                                                                    onChange={handleEndTimeChange}
+                                                                    className="w-[120px]"
+                                                                    debounceTime={50}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Switch
+                                                            id="all-day"
+                                                            checked={isAllDay}
+                                                            onCheckedChange={setIsAllDay}
+                                                        />
+                                                        <Label htmlFor="all-day">終日</Label>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {eventsOnDate.map((event, index) => (
+                                                <div key={event.id} className="space-y-2">
+                                                    {/* イベントカード */}
+                                                    <div
+                                                        id={`event-${event.id}`}
+                                                        className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
+                                                    >
+                                                        <div className="flex flex-col gap-2">
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="flex items-start gap-2">
+                                                                    <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
+                                                                        {formatTime(event.start_time)}
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-medium">{event.title}</div>
+                                                                        {event.location && (
+                                                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                                                                                <MapPin className="h-3 w-3" />
+                                                                                {event.location}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {event.is_all_day && (
+                                                                    <Badge variant="outline" className="text-xs">終日</Badge>
+                                                                )}
+                                                            </div>
+
+                                                            {!event.is_all_day && (
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                    <Clock className="h-3 w-3" />
+                                                                    {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                                                                </div>
+                                                            )}
+
+                                                            {/* イベントの内容があれば表示 */}
+                                                            {event.content && (
+                                                                <div className="text-sm mt-1 border-t pt-2">
+                                                                    {event.content}
+                                                                </div>
+                                                            )}
+
+                                                            {/* 参加者数は型にないので表示しない */}
+                                                            {/* 
+                                                            {event.entry_type === "event" && event.participants_count > 0 && (
+                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                                                                    <Users className="h-3 w-3" />
+                                                                    <span>{event.participants_count}人参加</span>
+                                                                </div>
+                                                            )}
+                                                            */}
+
+                                                            {/* リアクション情報は型にないので表示しない */}
+                                                            {/*
+                                                            {event.reactions && Object.keys(event.reactions).length > 0 && (
+                                                                <div className="flex gap-1 mt-1">
+                                                                    {Object.entries(event.reactions).map(([emoji, count]) => (
+                                                                        <Badge key={emoji} variant="secondary" className="text-xs gap-1">
+                                                                            {emoji} <span>{count}</span>
+                                                                        </Badge>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                            */}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* イベントがない場合 */}
+                                            {eventsOnDate.length === 0 && !isSelectedDate && (
+                                                <div className="py-6 text-center text-muted-foreground">
+                                                    <div className="mb-2">予定はありません</div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
+
+                        {datesWithEvents.length === 0 && !showAddForm && (
+                            <div className="py-12 text-center text-muted-foreground">予定はありません</div>
+                        )}
+                    </div>
+                </ScrollArea>
+
+                <div className="space-y-4">
+                    <p>{entry?.content}</p>
+                    <div className="flex flex-col gap-2">
+                        <div className="flex gap-2">
+                            {["👍", "❤️"].map((emoji) => (
+                                <div key={emoji} className="relative group">
+                                    <Button
+                                        variant={userReactions.includes(emoji) ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => handleReactionToggle(emoji)}
+                                    >
+                                        {emoji} {reactions[emoji] || 0}
+                                    </Button>
+                                    {reactionDetails[emoji]?.users?.length > 0 && (
+                                        <div className="absolute top-full left-0 mt-1 bg-white p-2 rounded shadow-md z-10 hidden group-hover:block w-max border border-gray-200">
+                                            {reactionDetails[emoji].users.map((user) => (
+                                                <div key={user.user_id} className="text-xs py-1 flex items-center gap-1">
+                                                    <span className="font-semibold">{user.username}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {Object.entries(reactionDetails).length > 0 && (
+                            <div className="text-xs text-gray-500">
+                                {Object.entries(reactionDetails).map(([emoji, detail]) => (
+                                    detail.users.length > 0 && (
+                                        <div key={emoji} className="flex items-center gap-1 mt-1">
+                                            <span>{emoji}</span>
+                                            <span className="font-semibold">
+                                                {detail.users.slice(0, 3).map(u => u.username).join(', ')}
+                                                {detail.users.length > 3 ? ` 他${detail.users.length - 3}人` : ''}
+                                            </span>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-medium">コメント</h4>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {comments.map((c) => (
+                                <div key={c.id} className="border rounded p-2 text-sm">
+                                    <span className="font-semibold">{c.user_id}</span>: {c.comment}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+});
+
 export function EventDialog({
     open,
     onOpenChange,
@@ -95,8 +454,7 @@ export function EventDialog({
 
     const [showAddForm, setShowAddForm] = useState(false)
     const [addFormDate, setAddFormDate] = useState<Date | null>(null)
-    const [addFormTimeSlot, setAddFormTimeSlot] = useState<string | null>(null)
-    const scrollRef = useRef<HTMLDivElement>(null)
+    const scrollRef = useRef<HTMLDivElement | null>(null)
 
     // ドラッグ開始時の処理
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -164,8 +522,6 @@ export function EventDialog({
         };
     }, []);
 
-
-
     // 日付ごとにイベントをグループ化
     const groupedEvents = events?.reduce(
         (groups: Record<string, Event[]>, event: Event) => {
@@ -196,99 +552,17 @@ export function EventDialog({
         }
     })
 
-    // 選択された日付またはイベントが変更されたときの処理
     useEffect(() => {
-        if (entryId) {
-            // イベントが選択された場合、そのイベントの詳細を表示
-            setShowAddForm(false)
-
-            // 選択されたイベントの位置までスクロール
-            setTimeout(() => {
-                const eventElement = document.getElementById(`event-${entryId}`)
-                if (eventElement && scrollRef.current) {
-                    eventElement.scrollIntoView({ behavior: "smooth", block: "center" })
-                }
-            }, 100)
-        } else if (selectedStartDate && !showAddForm) {
-            // 日付が選択された場合、予定追加フォームを表示して適切な位置までスクロール
-            const selectedDate = new Date(selectedStartDate)
-            setAddFormDate(selectedDate)
-            setStartDate(selectedDate)
-            setEndDate(selectedDate)
-            setShowAddForm(true)
-        }
-    }, [entryId, selectedStartDate, selectedEndDate, showAddForm]);
-
-    // スクロール処理を分離して別のuseEffectで実行
-    useEffect(() => {
-        if (!addFormDate || !showAddForm || entryId) return;
-        
-        // 選択された日付のフォーマット
-        const selectedDateStr = format(addFormDate, "yyyy-MM-dd")
-        
-        setTimeout(() => {
-            // 選択された日付のブロックを探す
-            const dateElement = document.getElementById(`date-${selectedDateStr}`)
-            
-            if (dateElement && scrollRef.current) {
-                dateElement.scrollIntoView({ behavior: "smooth", block: "start" })
-            } else {
-                // 日付ブロックがない場合は、その日付が入るべき位置を見つける
-                // 既存のイベント日をソート
-                const sortedEventDates = datesWithEvents
-                    .map(date => format(date, "yyyy-MM-dd"))
-                    .sort()
-                
-                // 選択された日付の直前と直後の日付を特定
-                let nextDateStr = null
-                for (const eventDateStr of sortedEventDates) {
-                    if (eventDateStr > selectedDateStr) {
-                        nextDateStr = eventDateStr
-                        break
-                    }
-                }
-                
-                if (nextDateStr) {
-                    // 次の日付が見つかった場合、その位置までスクロール
-                    const nextDateElement = document.getElementById(`date-${nextDateStr}`)
-                    if (nextDateElement && scrollRef.current) {
-                        nextDateElement.scrollIntoView({ behavior: "smooth", block: "start" })
-                    }
-                } else {
-                    // 最後の日付より後の場合、最後の要素までスクロール
-                    const lastDateStr = sortedEventDates[sortedEventDates.length - 1]
-                    if (lastDateStr) {
-                        const lastDateElement = document.getElementById(`date-${lastDateStr}`)
-                        if (lastDateElement && scrollRef.current) {
-                            lastDateElement.scrollIntoView({ behavior: "smooth", block: "start" })
-                        }
-                    }
-                }
+        if (!entryId || !open) {
+            // entryId がない場合やダイアログが閉じた場合は entry をクリア
+            // これにより、日付クリック時に wentFromEventToDate が正しく判定される
+            if (entry) {
+                 console.log('[fetchData Effect] Clearing entry state because entryId is null or dialog closed');
+                 setEntry(null);
             }
-        }, 100)
-    }, [addFormDate, showAddForm, entryId, datesWithEvents]);
-
-    // 予定追加フォームを閉じる
-    const handleCloseAddForm = () => {
-        setShowAddForm(false)
-    }
-
-    // 日付の表示形式を整形
-    const formatDateHeader = (date: Date) => {
-        if (isToday(date)) {
-            return `今日 (${format(date, "M/d")})`
-        } else if (isTomorrow(date)) {
-            return `明日 (${format(date, "M/d")})`
-        } else if (isYesterday(date)) {
-            return `昨日 (${format(date, "M/d")})`
-        } else {
-            return format(date, "yyyy年M月d日 (E)",)
+            return; 
         }
-    }
-
-    useEffect(() => {
-        if (!entryId || !open) return;
-        console.log("entryId:", entryId);
+        console.log("[fetchData Effect Triggered]", { entryId }); // fetchData のログも残す
         const fetchData = async () => {
             const { data: entryData } = await supabase.rpc("get_entry_with_details", { p_entry_id: entryId });
             const { data: commentData } = await supabase.rpc("get_entry_comments", { p_entry_id: entryId });
@@ -346,7 +620,118 @@ export function EventDialog({
             setUserReactions(currentUserReactions);
         };
         fetchData();
-    }, [entryId, open]);
+    }, [entryId, open, supabase]);
+
+    useEffect(() => {
+        // ★wentFromEventToDate フラグの計算方法を変更
+        const wentFromEventToDate = !entryId && !!entry; // 現在 entryId がなく、かつ entry データが存在する場合
+
+        // ★デバッグ用ログ更新
+        console.log('[Effect Triggered]', {
+            currentEntryId: entryId,
+            selectedStartDate,
+            showAddForm,
+            addFormDate: addFormDate ? format(addFormDate, 'yyyy-MM-dd') : null,
+            entryExists: !!entry, // entry の存在有無をログに追加
+            wentFromEventToDate // フラグの値もログに出力
+        });
+
+        const isEventSelectedNow = !!entryId;
+        const isDateSelectedNow = !!selectedStartDate;
+
+        // ★デバッグ用ログ更新
+        console.log('[State Check]', { isEventSelectedNow, isDateSelectedNow, wentFromEventToDate });
+
+        if (isEventSelectedNow) {
+            // --- イベントが選択された場合の処理 ---
+            console.log('[Action] Event Selected Path');
+            // イベント選択時は必ずフォーム非表示にする
+            if (showAddForm) setShowAddForm(false);
+            // スクロール処理
+            setTimeout(() => {
+                const eventElement = document.getElementById(`event-${entryId}`);
+                if (eventElement && scrollRef.current) {
+                    eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            }, 100);
+
+        } else if (isDateSelectedNow) {
+            // --- 日付が選択された場合の処理 ---
+            console.log('[Action] Date Selected Path');
+            const selectedDate = new Date(selectedStartDate);
+            const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
+            const shouldShowForm = !showAddForm || (addFormDate && format(addFormDate, "yyyy-MM-dd") !== selectedDateStr);
+
+            if (shouldShowForm || wentFromEventToDate) { // wentFromEventToDate でもフォーム表示/状態更新を行う
+                console.log('[Action] Showing/Updating Add Form');
+                setAddFormDate(selectedDate);
+                setStartDate(selectedDate);
+                setEndDate(selectedDate);
+
+                // ★リセットロジックで wentFromEventToDate フラグを使用
+                if (wentFromEventToDate) {
+                    console.log('[Reset Logic] Event -> Date: Resetting Title & DateTime');
+                    setNewTitle("");
+                    setStartTime("00:00");
+                    setEndTime("00:00");
+                    setIsAllDay(true);
+                    // フォームを強制的に表示状態にする
+                    if (!showAddForm) setShowAddForm(true);
+                } else {
+                    console.log('[Reset Logic] Date -> Date or Initial: Resetting DateTime only');
+                    // タイトルは維持 (newTitle は変更しない)
+                    setStartTime("00:00");
+                    setEndTime("00:00");
+                    setIsAllDay(true);
+                    // 新規日付クリックならフォーム表示
+                    if (shouldShowForm && !showAddForm) setShowAddForm(true);
+                }
+            } else {
+                 console.log('[Action] Add Form Already Shown for this date');
+            }
+
+            // スクロール処理 (フォームが表示されている場合のみ)
+            if (showAddForm || wentFromEventToDate) {
+                setTimeout(() => {
+                    if (!scrollRef.current) return;
+                    const dateElement = document.getElementById(`date-${selectedDateStr}`);
+                    if (dateElement) {
+                        dateElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                    } else {
+                        // フォールバック処理
+                        const sortedEventDates = datesWithEvents.map(date => format(date, "yyyy-MM-dd")).sort();
+                        let nextDateStr: string | null = null;
+                        for (const eventDateStr of sortedEventDates) {
+                            if (eventDateStr > selectedDateStr) {
+                                nextDateStr = eventDateStr;
+                                break;
+                            }
+                        }
+                        if (nextDateStr) {
+                            const nextDateElement = document.getElementById(`date-${nextDateStr}`);
+                            if (nextDateElement) {
+                                nextDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }
+                        } else {
+                            const lastDateStr = sortedEventDates[sortedEventDates.length - 1];
+                            if (lastDateStr) {
+                                const lastDateElement = document.getElementById(`date-${lastDateStr}`);
+                                if (lastDateElement) {
+                                    lastDateElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                                }
+                            }
+                        }
+                    }
+                }, 100);
+            }
+        } else {
+             console.log('[Action] Neither Event nor Date Selected');
+             // イベントも日付も選択されていない場合、フォームを閉じるのが自然かもしれない
+             if (showAddForm) setShowAddForm(false);
+        }
+
+    // ★依存配列に entry, entryId を追加
+    }, [entryId, selectedStartDate, datesWithEvents, showAddForm, addFormDate, scrollRef, entry]);
 
     const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
         if (!date) return undefined;
@@ -475,299 +860,25 @@ export function EventDialog({
         }
     };
 
-    const EventContent = () => (
-        <>
-            <div className={cn("flex justify-end", isMobile && "mb-4")}>
-                {isOwner && (
-                    entryId ? (
-                        <>
-                            <Button onClick={handleUpdate} variant="ghost" size="icon">
-                                <Save className="h-4 w-4" />
-                            </Button>
-                            <Button onClick={handleDelete} variant="ghost" size="icon">
-                                <Trash className="h-4 w-4" />
-                            </Button>
-                        </>
-                    ) : (
-                        <Button onClick={handleAdd} variant="ghost" size="icon">
-                            <Check className="h-4 w-4" />
-                        </Button>
-                    )
-                )}
-            </div>
-            <div className="flex flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-[100px] justify-start text-left font-normal",
-                                        !startDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={startDate}
-                                    onSelect={setStartDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                        {!isAllDay && (
-                            <Input
-                                type="time"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                                className="w-[120px]"
-                            />
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                        "w-[100px] justify-start text-left font-normal",
-                                        !endDate && "text-muted-foreground"
-                                    )}
-                                >
-                                    {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0">
-                                <Calendar
-                                    mode="single"
-                                    selected={endDate}
-                                    onSelect={setEndDate}
-                                    initialFocus
-                                />
-                            </PopoverContent>
-                        </Popover>
-                        {!isAllDay && (
-                            <Input
-                                type="time"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                                className="w-[120px]"
-                            />
-                        )}
-                    </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Switch
-                        id="all-day"
-                        checked={isAllDay}
-                        onCheckedChange={setIsAllDay}
-                    />
-                    <Label htmlFor="all-day">終日</Label>
-                </div>
+    const handleTitleChange = useCallback((value: string) => {
+        setNewTitle(value);
+    }, []);
 
-                {/* タイムラインビュー */}
-                <ScrollArea className="flex-1" ref={scrollRef}>
-                    {/* タイムライン表示（予定がある日のみ） */}
-                    <div className="divide-y">
-                        {/* 既存の日付の配列を取得してソート */}
-                        {(() => {
-                            const allDates = [...datesWithEvents];
-                            
-                            // 選択された日付が存在し、追加フォームが表示されている場合は、その日付も含める
-                            if (showAddForm && addFormDate && !datesWithEvents.some(date => 
-                                format(date, "yyyy-MM-dd") === format(addFormDate, "yyyy-MM-dd")
-                            )) {
-                                allDates.push(addFormDate);
-                            }
-                            
-                            // 日付を昇順でソート
-                            return allDates.sort(compareAsc).map(date => {
-                                const dateStr = format(date, "yyyy-MM-dd");
-                                const eventsOnDate = groupedEvents[dateStr] || [];
-                                const isSelectedDate = addFormDate && format(addFormDate, "yyyy-MM-dd") === dateStr;
-                                
-                                return (
-                                    <div key={dateStr} id={`date-${dateStr}`} className="py-2">
-                                        {/* 日付ヘッダー */}
-                                        <div className="sticky top-0 bg-white px-4 py-2 z-10 flex justify-between items-center">
-                                            <h3 className="font-medium">{formatDateHeader(date)}</h3>
-                                        </div>
+    // 時間入力用のハンドラー
+    const handleStartTimeChange = useCallback((value: string) => {
+        setStartTime(value);
+    }, []);
 
-                                        {/* イベントリスト */}
-                                        <div className="space-y-4 px-4 mt-2">
-                                            {/* 予定追加フォーム */}
-                                            {isSelectedDate && showAddForm && !entryId && (
-                                                <div className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50">
-                                                    <div className="flex justify-between items-center mb-2">
-                                                        <h4 className="text-sm font-medium text-blue-700">新規予定</h4>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            onClick={handleCloseAddForm}
-                                                            className="h-6 w-6 p-0"
-                                                        >
-                                                            <X className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                    <div className="text-sm text-blue-700">
-                                                        上部のフォームに予定の詳細を入力してください
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            {eventsOnDate.map((event, index) => (
-                                                <div key={event.id} className="space-y-2">
-                                                    {/* イベントカード */}
-                                                    <div
-                                                        id={`event-${event.id}`}
-                                                        className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
-                                                    >
-                                                        <div className="flex flex-col gap-2">
-                                                            <div className="flex justify-between items-start">
-                                                                <div className="flex items-start gap-2">
-                                                                    <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
-                                                                        {formatTime(event.start_time)}
-                                                                    </div>
-                                                                    <div>
-                                                                        <div className="font-medium">{event.title}</div>
-                                                                        {event.location && (
-                                                                            <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                                                                                <MapPin className="h-3 w-3" />
-                                                                                {event.location}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                                {event.is_all_day && (
-                                                                    <Badge variant="outline" className="text-xs">終日</Badge>
-                                                                )}
-                                                            </div>
-                                                            
-                                                            {!event.is_all_day && (
-                                                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                    <Clock className="h-3 w-3" />
-                                                                    {formatTime(event.start_time)} - {formatTime(event.end_time)}
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {/* イベントの内容があれば表示 */}
-                                                            {event.content && (
-                                                                <div className="text-sm mt-1 border-t pt-2">
-                                                                    {event.content}
-                                                                </div>
-                                                            )}
-                                                            
-                                                            {/* 参加者数は型にないので表示しない */}
-                                                            {/* 
-                                                            {event.entry_type === "event" && event.participants_count > 0 && (
-                                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                                                                    <Users className="h-3 w-3" />
-                                                                    <span>{event.participants_count}人参加</span>
-                                                                </div>
-                                                            )}
-                                                            */}
-                                                            
-                                                            {/* リアクション情報は型にないので表示しない */}
-                                                            {/*
-                                                            {event.reactions && Object.keys(event.reactions).length > 0 && (
-                                                                <div className="flex gap-1 mt-1">
-                                                                    {Object.entries(event.reactions).map(([emoji, count]) => (
-                                                                        <Badge key={emoji} variant="secondary" className="text-xs gap-1">
-                                                                            {emoji} <span>{count}</span>
-                                                                        </Badge>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                            */}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-
-                                            {/* イベントがない場合 */}
-                                            {eventsOnDate.length === 0 && !isSelectedDate && (
-                                                <div className="py-6 text-center text-muted-foreground">
-                                                    <div className="mb-2">予定はありません</div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
-                            });
-                        })()}
-
-                        {datesWithEvents.length === 0 && !showAddForm && (
-                            <div className="py-12 text-center text-muted-foreground">予定はありません</div>
-                        )}
-                    </div>
-                </ScrollArea>
-
-                <div className="space-y-4">
-                    <p>{entry?.content}</p>
-                    <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                            {["👍", "❤️", "😂", "🍻"].map((emoji) => (
-                                <div key={emoji} className="relative group">
-                                    <Button
-                                        variant={userReactions.includes(emoji) ? "default" : "outline"}
-                                        size="sm"
-                                        onClick={() => handleReactionToggle(emoji)}
-                                    >
-                                        {emoji} {reactions[emoji] || 0}
-                                    </Button>
-                                    {reactionDetails[emoji]?.users?.length > 0 && (
-                                        <div className="absolute top-full left-0 mt-1 bg-white p-2 rounded shadow-md z-10 hidden group-hover:block w-max border border-gray-200">
-                                            {reactionDetails[emoji].users.map((user) => (
-                                                <div key={user.user_id} className="text-xs py-1 flex items-center gap-1">
-                                                    <span className="font-semibold">{user.username}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                        {Object.entries(reactionDetails).length > 0 && (
-                            <div className="text-xs text-gray-500">
-                                {Object.entries(reactionDetails).map(([emoji, detail]) => (
-                                    detail.users.length > 0 && (
-                                        <div key={emoji} className="flex items-center gap-1 mt-1">
-                                            <span>{emoji}</span>
-                                            <span className="font-semibold">
-                                                {detail.users.slice(0, 3).map(u => u.username).join(', ')}
-                                                {detail.users.length > 3 ? ` 他${detail.users.length - 3}人` : ''}
-                                            </span>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                    <div>
-                        <h4 className="text-sm font-medium">コメント</h4>
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {comments.map((c) => (
-                                <div key={c.id} className="border rounded p-2 text-sm">
-                                    <span className="font-semibold">{c.user_id}</span>: {c.comment}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </>
-    );
+    const handleEndTimeChange = useCallback((value: string) => {
+        setEndTime(value);
+    }, []);
 
     if (isMobile) {
         return (
             <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
                 <SheetContent
                     side="bottom"
-                    className="rounded-t-xl overflow-hidden flex flex-col bg-white border-t border-x shadow-lg p-0"
+                    className="rounded-t-xl gap-y-0 overflow-hidden flex flex-col bg-white border-t border-x shadow-lg p-0"
                     style={{ height: `${sheetHeight}vh` }}
                     onPointerDownOutside={(e) => e.preventDefault()}
                     onInteractOutside={(e) => e.preventDefault()}
@@ -792,19 +903,46 @@ export function EventDialog({
                         </div>
                     </div>
 
-                    <SheetHeader className="px-4 py-2">
+                    <SheetHeader className="px-4">
                         <SheetTitle>
-                            <Input
-                                value={newTitle}
-                                onChange={(e) => setNewTitle(e.target.value)}
-                                placeholder="イベントタイトルを入力"
-                                className="w-full mt-2"
-                                autoFocus={false}
-                            />
                         </SheetTitle>
                     </SheetHeader>
                     <div className="px-4 flex-1 overflow-y-auto">
-                        <EventContent />
+                        {/* MemoizedEventContent を使用 */}
+                        <MemoizedEventContent 
+                            isMobile={isMobile}
+                            isOwner={isOwner}
+                            entryId={entryId}
+                            entry={entry}
+                            events={events}
+                            groupedEvents={groupedEvents}
+                            datesWithEvents={datesWithEvents}
+                            showAddForm={showAddForm}
+                            addFormDate={addFormDate}
+                            newTitle={newTitle}
+                            handleTitleChange={handleTitleChange}
+                            startDate={startDate}
+                            setStartDate={setStartDate}
+                            startTime={startTime}
+                            handleStartTimeChange={handleStartTimeChange}
+                            endDate={endDate}
+                            setEndDate={setEndDate}
+                            endTime={endTime}
+                            handleEndTimeChange={handleEndTimeChange}
+                            isAllDay={isAllDay}
+                            setIsAllDay={setIsAllDay}
+                            handleUpdate={handleUpdate}
+                            handleDelete={handleDelete}
+                            handleAdd={handleAdd}
+                            handleReactionToggle={handleReactionToggle}
+                            userReactions={userReactions}
+                            reactions={reactions}
+                            reactionDetails={reactionDetails}
+                            comments={comments}
+                            scrollRef={scrollRef}
+                            formatDateHeader={formatDateHeader}
+                            formatTime={formatTime}
+                        />
                     </div>
                 </SheetContent>
             </Sheet>
@@ -816,18 +954,45 @@ export function EventDialog({
             <DialogContent
                 className="w-[25%] max-w-xl h-[50vh] overflow-y-auto"
                 style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}
-                onOpenAutoFocus={(e) => e.preventDefault()}>
+                onOpenAutoFocus={(e) => e.preventDefault()}> 
                 <DialogHeader>
                     <DialogTitle>
-                        <Input
-                            value={newTitle}
-                            onChange={(e) => setNewTitle(e.target.value)}
-                            placeholder="イベントタイトルを入力"
-                            className="w-full mt-2"
-                            autoFocus={false}
-                        />
                     </DialogTitle>
-                    <EventContent />
+                    {/* MemoizedEventContent を使用 */}
+                    <MemoizedEventContent
+                        isMobile={isMobile}
+                        isOwner={isOwner}
+                        entryId={entryId}
+                        entry={entry}
+                        events={events}
+                        groupedEvents={groupedEvents}
+                        datesWithEvents={datesWithEvents}
+                        showAddForm={showAddForm}
+                        addFormDate={addFormDate}
+                        newTitle={newTitle}
+                        handleTitleChange={handleTitleChange}
+                        startDate={startDate}
+                        setStartDate={setStartDate}
+                        startTime={startTime}
+                        handleStartTimeChange={handleStartTimeChange}
+                        endDate={endDate}
+                        setEndDate={setEndDate}
+                        endTime={endTime}
+                        handleEndTimeChange={handleEndTimeChange}
+                        isAllDay={isAllDay}
+                        setIsAllDay={setIsAllDay}
+                        handleUpdate={handleUpdate}
+                        handleDelete={handleDelete}
+                        handleAdd={handleAdd}
+                        handleReactionToggle={handleReactionToggle}
+                        userReactions={userReactions}
+                        reactions={reactions}
+                        reactionDetails={reactionDetails}
+                        comments={comments}
+                        scrollRef={scrollRef}
+                        formatDateHeader={formatDateHeader}
+                        formatTime={formatTime}
+                    />
                 </DialogHeader>
             </DialogContent>
         </Dialog>
