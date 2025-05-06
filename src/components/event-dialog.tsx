@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { addDays, compareAsc, format, isSameDay, isToday, isTomorrow, isYesterday } from "date-fns";
+import { addDays, compareAsc, compareDesc, format, isSameDay, isToday, isTomorrow, isYesterday } from "date-fns";
 import { ja } from "date-fns/locale";
 import { toZonedTime, format as formatTz } from 'date-fns-tz';
 import { CalendarIcon, Clock, GripHorizontal, Plus, ChevronUp, ChevronDown, MapPin, X, Pencil } from "lucide-react";
@@ -149,6 +149,23 @@ const MemoizedEventContent = memo<EventContentProps>(({
     return (
         <>
             <div className="flex flex-col gap-4">
+                {targetUserProfile && (
+                    <Card className="mt-4">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Avatar>
+                                    <AvatarImage src={targetUserProfile.avatarUrl || undefined} alt={targetUserProfile.username || 'User Avatar'} />
+                                    <AvatarFallback>{targetUserProfile.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                                </Avatar>
+                                {targetUserProfile.username || 'ユーザー'}
+                            </CardTitle>
+                            <CardDescription>プロフィール</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p>{targetUserProfile.bio || '自己紹介はありません。'}</p>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <ScrollArea className="flex-1" ref={scrollRef}>
                     <div className="divide-y">
@@ -161,7 +178,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                 allDates.push(addFormDate);
                             }
 
-                            return allDates.sort(compareAsc).map(date => {
+                            return allDates.sort(compareDesc).map(date => {
                                 const dateStr = format(date, "yyyy-MM-dd");
                                 const eventsOnDate = groupedEvents[dateStr] || [];
                                 const isSelectedDate = addFormDate && format(addFormDate, "yyyy-MM-dd") === dateStr;
@@ -427,24 +444,6 @@ const MemoizedEventContent = memo<EventContentProps>(({
                         )}
                     </div>
                 </ScrollArea>
-
-                {targetUserProfile && (
-                    <Card className="mt-4">
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Avatar>
-                                    <AvatarImage src={targetUserProfile.avatarUrl || undefined} alt={targetUserProfile.username || 'User Avatar'} />
-                                    <AvatarFallback>{targetUserProfile.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                                </Avatar>
-                                {targetUserProfile.username || 'ユーザー'}
-                            </CardTitle>
-                            <CardDescription>プロフィール</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p>{targetUserProfile.bio || '自己紹介はありません。'}</p>
-                        </CardContent>
-                    </Card>
-                )}
 
                 <div className="space-y-4">
                     <p>{entry?.content}</p>
