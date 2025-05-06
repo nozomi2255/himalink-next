@@ -1,36 +1,28 @@
 import { useCalendar } from "@/contexts/calendar-context";
 import { useEffect, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+// import { createClient } from "@/utils/supabase/client"; // May not be needed anymore
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
-
-interface RecentEvent {
-  event_id: string;
-  user_id: string;
-  title: string;
-  content: string;
-  entry_type: string;
-  start_time: string; // Supabaseのtimestamp with time zoneは通常文字列で返されます
-  end_time: string; // 同上
-  is_all_day: boolean;
-  location: string;
-  avatar_url: string;
-  updated_at: string;
-  time_since_update: string; // Supabaseのinterval型は通常文字列で返されます
-}
+import type { RecentEvent } from "@/app/types"; // Import type from types.ts
 
 interface CalendarHeaderProps {
   // アニメーション関連のプロパティを削除
 }
 
 export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
-  const { currentMonth, userId, setSelectedUserIdForDialog /* , openUserEventDialog */ } = useCalendar();
-  const [recentAvatars, setRecentAvatars] = useState<RecentEvent[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    currentMonth,
+    userId,
+    setSelectedUserIdForDialog,
+    recentAvatars, // Get from context
+    isLoadingRecentAvatars, // Get from context
+    recentAvatarsError, // Get from context
+    setIsFollowedEventDialogOpen, // Get setter from context
+    /* , openUserEventDialog */
+  } = useCalendar();
   const [visitedUsers, setVisitedUsers] = useState<{[key: string]: {visited: boolean, lastSeenUpdate?: string}}>({});
   const [loadingUserId, setLoadingUserId] = useState<string | null>(null);
-  const supabase = createClient();
+  // const supabase = createClient(); // Remove if not used elsewhere in this component
   const currentDate = new Date(currentMonth + "-01"); // YYYY-MM-01 形式に変換
   
   // 月の日本語表記
@@ -45,50 +37,6 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
       setVisitedUsers(JSON.parse(storedVisitedUsers));
     }
   }, []);
-
-  useEffect(() => {
-    const fetchRecentEvents = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log("Current userId:", userId);
-      
-      if (!userId) {
-        setIsLoading(false);
-        // エラーメッセージを表示しない（開発時のみコンソールに出力）
-        console.log("ユーザーIDが設定されていません - 待機中");
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .rpc('get_recent_followed_events', {
-            _follower_id: userId
-          });
-
-        if (error) {
-          console.error("Error fetching recent events:", error);
-          setError(error.message);
-          return;
-        }
-
-        console.log("Recent events data:", data);
-        setRecentAvatars(data || []);
-      } catch (err) {
-        console.error("Exception in fetching events:", err);
-        setError("データ取得中にエラーが発生しました");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchRecentEvents();
-
-    // 1分ごとに更新
-    const interval = setInterval(fetchRecentEvents, 60000);
-
-    return () => clearInterval(interval);
-  }, [userId, supabase]);
 
   // 同じユーザーIDのアバターは1つだけ表示する処理
   const uniqueAvatars = recentAvatars.reduce<RecentEvent[]>((unique, event) => {
@@ -123,13 +71,14 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
     localStorage.setItem('visitedUsers', JSON.stringify(newVisitedUsers));
 
     // コンテキストに選択されたユーザーIDを設定
-    setSelectedUserIdForDialog(userId); 
+    setSelectedUserIdForDialog(userId);
+    // フォローしているユーザーのイベントダイアログを開く
+    setIsFollowedEventDialogOpen(true);
 
-    // TODO: イベントダイアログを開く処理を実装
     console.log(`Set selected user ID in context: ${userId}`); // ログも更新
 
     // ダイアログを開いた後、ローディング状態を解除する（適切なタイミングで）
-    // setLoadingUserId(null);
+    setLoadingUserId(null);
   };
 
   // ユーザーが新しいイベントを持っているかチェック
@@ -158,7 +107,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
             {avatarsToDisplay.map((event, index) => {
               const isVisited = visitedUsers[event.user_id]?.visited || false;
               const hasNewContent = hasNewEvent(event.user_id, event.updated_at);
-              const isLoading = loadingUserId === event.user_id;
+              const isLoadingAvatar = loadingUserId === event.user_id;
               
               // ボーダースタイルの設定 - 新しいコンテンツがある場合はカラーボーダー
               const borderStyle = isVisited && !hasNewContent
@@ -180,7 +129,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
                     <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt="ユーザーアバター" />
                     <AvatarFallback>ユ</AvatarFallback>
                   </Avatar>
-                  {isLoading && (
+                  {isLoadingAvatar && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full z-20">
                       <Loader2 className="h-5 w-5 text-white animate-spin" />
                     </div>
@@ -188,13 +137,15 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({}) => {
                 </div>
               );
             })}
-            {isLoading && <div className="text-sm text-gray-500 my-auto ml-2 flex items-center gap-2">
+            {isLoadingRecentAvatars && <div className="text-sm text-gray-500 my-auto ml-2 flex items-center gap-2">
               <Loader2 className="h-4 w-4 text-gray-500 animate-spin" />
               読込中...
             </div>}
-            {!isLoading && avatarsToDisplay.length === 0 && !error && userId && (
+            {!isLoadingRecentAvatars && avatarsToDisplay.length === 0 && !recentAvatarsError && userId && (
               <div className="text-sm text-gray-500 my-auto ml-2">最近の更新はありません</div>
             )}
+            {/* Display error message if needed - uncomment and style if required */}
+            {recentAvatarsError && <div className="text-sm text-red-500 my-auto ml-2">エラー: {recentAvatarsError}</div>}
           </div>
         </div>
       </div>

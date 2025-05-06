@@ -1,5 +1,6 @@
 'use client'
 import { createContext, useContext, useState, ReactNode } from 'react';
+import type { RecentEvent } from "@/app/types"; // Import from types.ts
 
 interface CalendarContextType {
   currentMonth: string;
@@ -12,6 +13,14 @@ interface CalendarContextType {
   setUsername: (name: string | null) => void;
   selectedUserIdForDialog: string | null;
   setSelectedUserIdForDialog: (id: string | null) => void;
+  recentAvatars: RecentEvent[];
+  setRecentAvatars: (avatars: RecentEvent[]) => void;
+  isLoadingRecentAvatars: boolean;
+  setIsLoadingRecentAvatars: (loading: boolean) => void;
+  recentAvatarsError: string | null;
+  setRecentAvatarsError: (error: string | null) => void;
+  isFollowedEventDialogOpen: boolean;
+  setIsFollowedEventDialogOpen: (open: boolean) => void;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -24,6 +33,10 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [selectedUserIdForDialog, setSelectedUserIdForDialog] = useState<string | null>(null);
+  const [recentAvatars, setRecentAvatars] = useState<RecentEvent[]>([]);
+  const [isLoadingRecentAvatars, setIsLoadingRecentAvatars] = useState<boolean>(true);
+  const [recentAvatarsError, setRecentAvatarsError] = useState<string | null>(null);
+  const [isFollowedEventDialogOpen, setIsFollowedEventDialogOpen] = useState<boolean>(false);
 
   return (
     <CalendarContext.Provider 
@@ -37,7 +50,15 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
         username,
         setUsername,
         selectedUserIdForDialog,
-        setSelectedUserIdForDialog
+        setSelectedUserIdForDialog,
+        recentAvatars,
+        setRecentAvatars,
+        isLoadingRecentAvatars,
+        setIsLoadingRecentAvatars,
+        recentAvatarsError,
+        setRecentAvatarsError,
+        isFollowedEventDialogOpen,
+        setIsFollowedEventDialogOpen
       }}
     >
       {children}

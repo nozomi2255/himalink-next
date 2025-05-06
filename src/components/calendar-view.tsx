@@ -5,8 +5,9 @@ import MainCalendar from "./main-calendar";
 import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
 import { EventDialog } from "@/components/event-dialog"
+import { EventDialog as FollowedRecentEventDialog } from "@/components/followed-recent-event-dialog";
 import { useCalendar } from "@/contexts/calendar-context";
-import type { UserProfile } from "@/app/types"
+import type { UserProfile, RecentEvent } from "@/app/types"
 
 interface CalendarViewProps {
   userId?: string; // オプショナルにして、未指定の場合は現在のユーザーのイベントを取得
@@ -14,7 +15,18 @@ interface CalendarViewProps {
 }
 
 export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
-  const { setUserId, setAvatarUrl: setContextAvatarUrl, setUsername: setContextUsername } = useCalendar();
+  const {
+    setUserId,
+    setAvatarUrl: setContextAvatarUrl,
+    setUsername: setContextUsername,
+    setRecentAvatars,
+    setIsLoadingRecentAvatars,
+    setRecentAvatarsError,
+    selectedUserIdForDialog,
+    isFollowedEventDialogOpen,
+    setIsFollowedEventDialogOpen,
+    recentAvatars,
+  } = useCalendar();
   const [events, setEvents] = useState<Event[]>([]);
   const isOwner = !userId || userId === currentUserId;
   const [userProfile, setUserProfile] = useState<UserProfile>({
@@ -82,6 +94,51 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
       }
     }
   };
+
+  // --- ここから RecentEvents 取得ロジック ---
+  useEffect(() => {
+    const fetchRecentEvents = async () => {
+      setIsLoadingRecentAvatars(true);
+      setRecentAvatarsError(null);
+
+      // currentUserId が利用可能になるまで待機
+      if (!currentUserId) {
+        console.log("Current user ID not available yet for recent events fetch.");
+        setIsLoadingRecentAvatars(false); // 待機中はローディング解除
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .rpc('get_recent_followed_events', {
+            _follower_id: currentUserId // props の currentUserId を使用
+          });
+
+        if (error) {
+          console.error("Error fetching recent events:", error);
+          setRecentAvatarsError(error.message);
+          return;
+        }
+
+        console.log("Recent events data fetched in CalendarView:", data);
+        setRecentAvatars(data || []); // データをコンテキストにセット
+      } catch (err: any) { // エラー型を明示
+        console.error("Exception in fetching recent events:", err);
+        setRecentAvatarsError("データ取得中にエラーが発生しました");
+      } finally {
+        setIsLoadingRecentAvatars(false); // ローディング状態を解除
+      }
+    };
+
+    fetchRecentEvents();
+
+    // 1分ごとに更新
+    const interval = setInterval(fetchRecentEvents, 60000);
+
+    // クリーンアップ関数
+    return () => clearInterval(interval);
+  }, [currentUserId, supabase, setRecentAvatars, setIsLoadingRecentAvatars, setRecentAvatarsError]); // 依存配列を更新
+  // --- ここまで RecentEvents 取得ロジック ---
 
   useEffect(() => {
     fetchEvents();
@@ -159,6 +216,30 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           modalPosition={modalPosition}
         />
       )}
+
+      {isFollowedEventDialogOpen && selectedUserIdForDialog && (() => {
+          // 選択されたユーザーのイベントをフィルタリング
+          const filteredEvents = recentAvatars.filter(event => event.user_id === selectedUserIdForDialog);
+          // ユーザー名を取得 (フィルタ結果があれば最初の要素から)
+          const username = filteredEvents.length > 0 ? filteredEvents[0].username : 'ユーザー';
+          // Event[] 型に変換
+          const mappedEvents = filteredEvents.map(re => ({
+            ...re,
+            id: re.event_id,
+            created_at: re.updated_at, 
+          }));
+
+          return (
+            <FollowedRecentEventDialog
+              open={isFollowedEventDialogOpen}
+              onOpenChange={setIsFollowedEventDialogOpen}
+              isOwner={false}
+              events={mappedEvents} // 変換後のイベント配列
+              targetUserId={selectedUserIdForDialog}
+              username={username} // 抽出したユーザー名を渡す
+            />
+          );
+        })()}
     </div>
   );
 }
