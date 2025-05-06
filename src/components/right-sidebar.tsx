@@ -10,9 +10,15 @@ interface RecentEvent {
   event_id: string;
   user_id: string;
   title: string;
-  updated_at: string;
+  content: string;
+  entry_type: string;
+  start_time: string; // Supabaseのtimestamp with time zoneは通常文字列で返されます
+  end_time: string; // 同上
+  is_all_day: boolean;
+  location: string;
   avatar_url: string;
-  time_since_update: string;
+  updated_at: string;
+  time_since_update: string; // Supabaseのinterval型は通常文字列で返されます
 }
 
 interface GroupedEvents {
