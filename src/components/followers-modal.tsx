@@ -15,7 +15,7 @@ export default function FollowersModal({ followers, onClose }: FollowersModalPro
 
   // ユーザークリック時の処理を定義
   const handleUserClick = (userId: string) => {
-    router.push(`/other-calendar/${userId}`);
+    router.push(`/${userId}`);
     onClose(); // モーダルを閉じる
   };
 
