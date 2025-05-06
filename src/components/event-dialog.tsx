@@ -106,6 +106,10 @@ interface EventContentProps {
     editingEventId: string | null;
     handleEditClick: (eventId: string) => void;
     handleCancelEdit: () => void;
+    handleEventReactionToggle: (eventId: string, emoji: string) => void;
+    eventUserReactions: Record<string, string[]>;
+    eventReactions: Record<string, Record<string, number>>;
+    eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
 }
 
 const MemoizedEventContent = memo<EventContentProps>(({ 
@@ -144,7 +148,11 @@ const MemoizedEventContent = memo<EventContentProps>(({
     targetUserProfile,
     editingEventId,
     handleEditClick,
-    handleCancelEdit
+    handleCancelEdit,
+    handleEventReactionToggle,
+    eventUserReactions,
+    eventReactions,
+    eventReactionDetails
 }) => {
     return (
         <>
@@ -235,7 +243,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                         {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日を選択</span>}
                                                                     </Button>
                                                                 </PopoverTrigger>
-                                                                <PopoverContent className="w-auto p-0">
+                                                                <PopoverContent className="w-full">
                                                                     <Calendar
                                                                         mode="single"
                                                                         selected={startDate}
@@ -267,7 +275,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                         {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日を選択</span>}
                                                                     </Button>
                                                                 </PopoverTrigger>
-                                                                <PopoverContent className="w-auto p-0">
+                                                                <PopoverContent className="w-auto">
                                                                     <Calendar
                                                                         mode="single"
                                                                         selected={endDate}
@@ -339,7 +347,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                                 {startDate ? format(startDate, "M'月'dd'日'") : <span>開始日</span>}
                                                                             </Button>
                                                                         </PopoverTrigger>
-                                                                        <PopoverContent className="w-auto p-0">
+                                                                        <PopoverContent className="w-auto">
                                                                             <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
                                                                         </PopoverContent>
                                                                     </Popover>
@@ -360,7 +368,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                                 {endDate ? format(endDate, "M'月'dd'日'") : <span>終了日</span>}
                                                                             </Button>
                                                                         </PopoverTrigger>
-                                                                        <PopoverContent className="w-auto p-0">
+                                                                        <PopoverContent className="w-auto">
                                                                             <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
                                                                         </PopoverContent>
                                                                     </Popover>
@@ -423,6 +431,34 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                         {event.content}
                                                                     </div>
                                                                 )}
+
+                                                                {/* Event Reactions Section */}
+                                                                <div className="mt-2 pt-2 border-t flex flex-col gap-1">
+                                                                    <div className="flex gap-1">
+                                                                        {["👍", "❤️", "🎉", "🤔"].map((emoji) => (
+                                                                            <div key={emoji} className="relative group">
+                                                                                <Button
+                                                                                    variant={(eventUserReactions[event.id] || []).includes(emoji) ? "default" : "outline"}
+                                                                                    size="sm"
+                                                                                    onClick={() => handleEventReactionToggle(event.id, emoji)}
+                                                                                    className="p-1 h-auto text-xs"
+                                                                                >
+                                                                                    {emoji} {(eventReactions[event.id]?.[emoji] || 0)}
+                                                                                </Button>
+                                                                                {(eventReactionDetails[event.id]?.[emoji]?.users?.length ?? 0) > 0 && (
+                                                                                    <div className="absolute top-full left-0 mt-1 bg-white p-1.5 rounded shadow-md z-20 hidden group-hover:block w-max border border-gray-200 text-xs">
+                                                                                        {(eventReactionDetails[event.id]?.[emoji]?.users ?? []).map((user) => (
+                                                                                            <div key={user.user_id} className="py-0.5 flex items-center gap-1">
+                                                                                                {user.avatar_url && <Avatar className="h-4 w-4"><AvatarImage src={user.avatar_url} alt={user.username}/><AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>}
+                                                                                                <span className="font-semibold">{user.username}</span>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     )}
@@ -544,6 +580,11 @@ export function EventDialog({
     const [addFormDate, setAddFormDate] = useState<Date | null>(null)
     const scrollRef = useRef<HTMLDivElement | null>(null)
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
+
+    // Event-specific reactions state
+    const [eventReactions, setEventReactions] = useState<Record<string, Record<string, number>>>({});
+    const [eventReactionDetails, setEventReactionDetails] = useState<Record<string, Record<string, ReactionDetail>>>({});
+    const [eventUserReactions, setEventUserReactions] = useState<Record<string, string[]>>({});
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
@@ -917,6 +958,37 @@ export function EventDialog({
         }
     };
 
+    const handleEventReactionToggle = async (eventId: string, emoji: string) => {
+        console.log(`Event reaction: eventId=${eventId}, emoji=${emoji}`);
+        // TODO: Implement Supabase call and state update for event-specific reactions
+        // This will likely require new or modified Supabase RPC functions.
+
+        // Placeholder for UI update - this is just a basic toggle for demonstration
+        setEventUserReactions(prev => {
+            const currentEventReactions = prev[eventId] || [];
+            if (currentEventReactions.includes(emoji)) {
+                return { ...prev, [eventId]: currentEventReactions.filter(r => r !== emoji) };
+            } else {
+                return { ...prev, [eventId]: [...currentEventReactions, emoji] };
+            }
+        });
+        setEventReactions(prev => {
+            const currentEmojiCount = prev[eventId]?.[emoji] || 0;
+            // Check if the emoji is *currently* in the user's reactions for this event *before* the update
+            const isReacted = (eventUserReactions[eventId] || []).includes(emoji);
+            const newEmojiCount = isReacted ? currentEmojiCount - 1 : currentEmojiCount + 1;
+
+            return {
+                ...prev,
+                [eventId]: {
+                    ...prev[eventId],
+                    [emoji]: Math.max(0, newEmojiCount)
+                }
+            };
+        });
+        // Note: eventReactionDetails would also need to be updated based on actual user data from Supabase.
+    };
+
     const handleTitleChange = useCallback((value: string) => {
         setNewTitle(value);
     }, []);
@@ -1042,6 +1114,10 @@ export function EventDialog({
                             editingEventId={editingEventId}
                             handleEditClick={handleEditClick}
                             handleCancelEdit={handleCancelEdit}
+                            handleEventReactionToggle={handleEventReactionToggle}
+                            eventUserReactions={eventUserReactions}
+                            eventReactions={eventReactions}
+                            eventReactionDetails={eventReactionDetails}
                         />
                     </div>
                 </SheetContent>
@@ -1052,7 +1128,7 @@ export function EventDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent
-                className="w-[25%] max-w-xl h-[50vh] overflow-y-auto"
+                className="w-[30%] h-[50vh] overflow-y-auto"
                 style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}
                 onOpenAutoFocus={(e) => e.preventDefault()}> 
                 <DialogHeader>
@@ -1095,6 +1171,10 @@ export function EventDialog({
                         editingEventId={editingEventId}
                         handleEditClick={handleEditClick}
                         handleCancelEdit={handleCancelEdit}
+                        handleEventReactionToggle={handleEventReactionToggle}
+                        eventUserReactions={eventUserReactions}
+                        eventReactions={eventReactions}
+                        eventReactionDetails={eventReactionDetails}
                     />
                 </DialogHeader>
             </DialogContent>
