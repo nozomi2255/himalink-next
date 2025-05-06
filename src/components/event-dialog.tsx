@@ -377,23 +377,17 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                     ) : (
                                                         <div
                                                             id={`event-${event.id}`}
-                                                            className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm relative group`}
+                                                            className={`p-3 rounded-lg border bg-white border-gray-200 shadow-sm`}
                                                         >
-                                                            {isOwner && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                                                                    onClick={() => handleEditClick(event.id)}
-                                                                >
-                                                                    <Pencil className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
                                                             <div className="flex flex-col gap-2">
                                                                 <div className="flex justify-between items-start">
                                                                     <div className="flex items-start gap-2">
                                                                         <div className="text-sm font-medium text-slate-500 min-w-[45px] mt-0.5">
-                                                                            {formatTime(event.start_time)}
+                                                                            {event.is_all_day ? (
+                                                                                <Badge variant="outline" className="text-xs">終日</Badge>
+                                                                            ) : (
+                                                                                formatTime(event.start_time)
+                                                                            )}
                                                                         </div>
                                                                         <div>
                                                                             <div className="font-medium">{event.title}</div>
@@ -405,8 +399,15 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                             )}
                                                                         </div>
                                                                     </div>
-                                                                    {event.is_all_day && (
-                                                                        <Badge variant="outline" className="text-xs">終日</Badge>
+                                                                    {isOwner && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="ml-2 transition-opacity"
+                                                                            onClick={() => handleEditClick(event.id)}
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Button>
                                                                     )}
                                                                 </div>
 
