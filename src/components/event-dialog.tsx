@@ -47,6 +47,10 @@ interface EventDialogProps {
     selectedEndDate?: string;
     modalPosition?: { top: number; left: number };
     targetUserProfile?: UserProfile;
+    eventReactions: Record<string, Record<string, number>>;
+    eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
+    eventUserReactions: Record<string, string[]>;
+    onEventReactionToggle: (eventId: string, emoji: string) => void;
 }
 
 function formatTime(datetime?: string, timeZone: string = 'Asia/Tokyo') {
@@ -54,8 +58,8 @@ function formatTime(datetime?: string, timeZone: string = 'Asia/Tokyo') {
     try {
         const date = new Date(datetime);
         if (isNaN(date.getTime())) {
-             console.error("Invalid date string provided to formatTime:", datetime);
-             return "-";
+            console.error("Invalid date string provided to formatTime:", datetime);
+            return "-";
         }
         const zonedDate = toZonedTime(date, timeZone);
         return formatTz(zonedDate, 'HH:mm', { timeZone, locale: ja });
@@ -80,7 +84,9 @@ interface EventContentProps {
     showAddForm: boolean;
     addFormDate: Date | null;
     newTitle: string;
+    newContent: string;
     handleTitleChange: (value: string) => void;
+    handleContentChange: (value: string) => void;
     startDate: Date | undefined;
     setStartDate: (date: Date | undefined) => void;
     startTime: string;
@@ -112,18 +118,19 @@ interface EventContentProps {
     eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
 }
 
-const MemoizedEventContent = memo<EventContentProps>(({ 
-    isMobile, 
-    isOwner, 
-    entryId, 
+const MemoizedEventContent = memo<EventContentProps>(({
+    isMobile,
+    isOwner,
+    entryId,
     entry,
-    events,
     groupedEvents,
     datesWithEvents,
     showAddForm,
     addFormDate,
     newTitle,
+    newContent,
     handleTitleChange,
+    handleContentChange,
     startDate,
     setStartDate,
     startTime,
@@ -197,11 +204,11 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                             <h3 className="font-medium">{formatDateHeader(date)}</h3>
                                         </div>
 
-                                        <div className="space-y-4 px-4 mt-2">
+                                        <div className="flex flex-col space-y-4 px-4 mt-2">
                                             {isSelectedDate && showAddForm && !editingEventId && !entryId && (
                                                 <div
                                                     key={`add-form-${dateStr}`}
-                                                    className="p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50"
+                                                    className="flex flex-col p-3 rounded-lg border border-dashed border-blue-400 bg-blue-50"
                                                 >
                                                     <div className={cn("flex justify-end", isMobile && "mb-4")}>
                                                         {isOwner && (
@@ -303,6 +310,14 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                         />
                                                         <Label htmlFor="all-day">終日</Label>
                                                     </div>
+                                                    <DebouncedInput
+                                                        value={newContent}
+                                                        onChange={handleContentChange}
+                                                        placeholder="詳細を入力"
+                                                        className="w-full mt-2 h-16"
+                                                        autoFocus={false}
+                                                        debounceTime={50}
+                                                    />
                                                 </div>
                                             )}
 
@@ -329,7 +344,7 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                 value={newTitle}
                                                                 onChange={handleTitleChange}
                                                                 placeholder="イベントタイトルを入力"
-                                                                className="w-full mt-2"
+                                                                className="w-full h-full mt-2"
                                                                 autoFocus={false}
                                                                 debounceTime={50}
                                                             />
@@ -381,6 +396,14 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                 <Switch id={`all-day-edit-${event.id}`} checked={isAllDay} onCheckedChange={setIsAllDay} />
                                                                 <Label htmlFor={`all-day-edit-${event.id}`}>終日</Label>
                                                             </div>
+                                                            <DebouncedInput
+                                                                value={newContent}
+                                                                onChange={handleContentChange}
+                                                                placeholder="イベント内容を入力"
+                                                                className="w-full mt-2 h-16"
+                                                                autoFocus={false}
+                                                                debounceTime={50}
+                                                            />
                                                         </div>
                                                     ) : (
                                                         <div
@@ -446,10 +469,10 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                                     {emoji} {(eventReactions[event.id]?.[emoji] || 0)}
                                                                                 </Button>
                                                                                 {(eventReactionDetails[event.id]?.[emoji]?.users?.length ?? 0) > 0 && (
-                                                                                    <div className="absolute top-full left-0 mt-1 bg-white p-1.5 rounded shadow-md z-20 hidden group-hover:block w-max border border-gray-200 text-xs">
+                                                                                    <div className="absolute top-full left-0 mt-1 bg-white p-1.5 rounded shadow-md z-20 hidden group-hover:block md:block w-max border border-gray-200 text-xs">
                                                                                         {(eventReactionDetails[event.id]?.[emoji]?.users ?? []).map((user) => (
                                                                                             <div key={user.user_id} className="py-0.5 flex items-center gap-1">
-                                                                                                {user.avatar_url && <Avatar className="h-4 w-4"><AvatarImage src={user.avatar_url} alt={user.username}/><AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>}
+                                                                                                {user.avatar_url && <Avatar className="h-4 w-4"><AvatarImage src={user.avatar_url} alt={user.username} /><AvatarFallback>{user.username?.charAt(0).toUpperCase()}</AvatarFallback></Avatar>}
                                                                                                 <span className="font-semibold">{user.username}</span>
                                                                                             </div>
                                                                                         ))}
@@ -458,6 +481,25 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                                             </div>
                                                                         ))}
                                                                     </div>
+                                                                    {/* Mobile: always show who reacted */}
+                                                                    {isMobile && (
+                                                                        <div className="text-xs text-gray-500 md:hidden flex flex-col gap-0.5">
+                                                                            {["👍", "❤️", "🎉", "🤔"].map((emoji) => {
+                                                                                const users = eventReactionDetails[event.id]?.[emoji]?.users ?? [];
+                                                                                if (users.length === 0) return null;
+
+                                                                                const firstNames = users.slice(0, 3).map(u => u.username).join(", ");
+                                                                                const others = users.length > 3 ? ` 他${users.length - 3}人` : "";
+
+                                                                                return (
+                                                                                    <div key={emoji} className="flex items-center gap-1">
+                                                                                        <span>{emoji}</span>
+                                                                                        <span className="font-semibold">{firstNames}{others}</span>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -550,6 +592,10 @@ export function EventDialog({
     selectedEndDate,
     modalPosition = { top: 100, left: 100 },
     targetUserProfile,
+    eventReactions,
+    eventReactionDetails,
+    eventUserReactions,
+    onEventReactionToggle,
 }: EventDialogProps) {
     const [entry, setEntry] = useState<Event | null>(null);
     const [comments, setComments] = useState<any[]>([]);
@@ -558,6 +604,7 @@ export function EventDialog({
     const [userReactions, setUserReactions] = useState<string[]>([]);
     const [commentText, setCommentText] = useState("");
     const [newTitle, setNewTitle] = useState("");
+    const [newContent, setNewContent] = useState("");
     const [isAllDay, setIsAllDay] = useState(true);
     const [startDate, setStartDate] = useState<Date | undefined>(
         selectedStartDate ? new Date(selectedStartDate) : undefined
@@ -581,10 +628,6 @@ export function EventDialog({
     const scrollRef = useRef<HTMLDivElement | null>(null)
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
-    // Event-specific reactions state
-    const [eventReactions, setEventReactions] = useState<Record<string, Record<string, number>>>({});
-    const [eventReactionDetails, setEventReactionDetails] = useState<Record<string, Record<string, ReactionDetail>>>({});
-    const [eventUserReactions, setEventUserReactions] = useState<Record<string, string[]>>({});
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
         e.preventDefault();
@@ -668,10 +711,9 @@ export function EventDialog({
     })
 
     useEffect(() => {
-        console.log("[Form Data Effect] Triggered", { entryId, selectedStartDate });
         if (entryId && entry) {
-            console.log("[Form Data Effect] Populating from entry");
             setNewTitle(entry.title ?? "");
+            setNewContent(entry.content ?? "");
             setStartDate(entry.start_time ? new Date(entry.start_time) : undefined);
             setStartTime(entry.start_time ? format(new Date(entry.start_time), "HH:mm") : "00:00");
             setEndDate(entry.end_time ? new Date(entry.end_time) : undefined);
@@ -681,6 +723,7 @@ export function EventDialog({
             console.log("[Form Data Effect] Resetting for new date selection");
             const selectedDate = new Date(selectedStartDate);
             setNewTitle("");
+            setNewContent("");
             setStartDate(selectedDate);
             setStartTime("00:00");
             setEndDate(selectedDate);
@@ -688,29 +731,23 @@ export function EventDialog({
             setIsAllDay(true);
             setAddFormDate(selectedDate);
         } else {
-             console.log("[Form Data Effect] Clearing form (or no action)");
-             setAddFormDate(null);
+            console.log("[Form Data Effect] Clearing form (or no action)");
+            setAddFormDate(null);
         }
     }, [entryId, selectedStartDate, entry]);
 
     useEffect(() => {
-        console.log("[Visibility Effect] Triggered", { entryId, selectedStartDate });
         if (entryId) {
-            console.log("[Visibility Effect] Hiding form (event selected)");
             setShowAddForm(false);
         } else if (selectedStartDate) {
-            console.log("[Visibility Effect] Showing form (date selected)");
             setShowAddForm(true);
         } else {
-            console.log("[Visibility Effect] Hiding form (neither selected)");
             setShowAddForm(false);
         }
     }, [entryId, selectedStartDate]);
 
     useEffect(() => {
-        console.log("[Scroll Effect] Triggered", { entryId, addFormDate, showAddForm });
         if (entryId) {
-            console.log("[Scroll Effect] Scrolling to event", entryId);
             setTimeout(() => {
                 const eventElement = document.getElementById(`event-${entryId}`);
                 if (eventElement && scrollRef.current) {
@@ -719,14 +756,12 @@ export function EventDialog({
             }, 100);
         } else if (showAddForm && addFormDate) {
             const dateStr = format(addFormDate, "yyyy-MM-dd");
-            console.log("[Scroll Effect] Scrolling to date", dateStr);
             setTimeout(() => {
                 if (!scrollRef.current) return;
                 const dateElement = document.getElementById(`date-${dateStr}`);
                 if (dateElement) {
                     dateElement.scrollIntoView({ behavior: "smooth", block: "center" });
                 } else {
-                    console.log("[Scroll Effect] Date element not found, using fallback");
                     const sortedEventDates = datesWithEvents.map(d => format(d, "yyyy-MM-dd")).sort();
                     let nextDateStr: string | null = null;
                     for (const eventDateStr of sortedEventDates) {
@@ -762,13 +797,11 @@ export function EventDialog({
 
         if (!entryId) {
             if (entry) {
-                console.log('[Fetch Data Effect] Clearing entry state because entryId is null');
                 setEntry(null);
             }
             return;
         }
-        
-        console.log("[Fetch Data Effect] Triggered for entryId:", entryId);
+
         let isMounted = true;
         const fetchData = async () => {
             try {
@@ -814,12 +847,12 @@ export function EventDialog({
 
             } catch (error) {
                 console.error("[Fetch Data Effect] Error fetching data:", error);
-                 if (!isMounted) return;
-                 setEntry(null);
-                 setComments([]);
-                 setReactions({});
-                 setReactionDetails({});
-                 setUserReactions([]);
+                if (!isMounted) return;
+                setEntry(null);
+                setComments([]);
+                setReactions({});
+                setReactionDetails({});
+                setUserReactions([]);
             }
         };
 
@@ -829,6 +862,7 @@ export function EventDialog({
             isMounted = false;
         };
     }, [entryId, open, supabase]);
+
 
     const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
         if (!date) return undefined;
@@ -845,6 +879,7 @@ export function EventDialog({
         const { error } = await supabase.rpc('insert_entry', {
             p_user_id: targetUserId,
             p_title: newTitle,
+            p_content: newContent,
             p_start_time: combineDateTime(startDate, startTime),
             p_end_time: combineDateTime(endDate, endTime),
             p_is_all_day: isAllDay,
@@ -863,6 +898,7 @@ export function EventDialog({
         const { error } = await supabase.rpc('update_entry', {
             p_id: editingEventId,
             p_title: newTitle,
+            p_content: newContent,
             p_start_time: combineDateTime(startDate, startTime),
             p_end_time: combineDateTime(endDate, endTime),
             p_is_all_day: isAllDay,
@@ -958,36 +994,6 @@ export function EventDialog({
         }
     };
 
-    const handleEventReactionToggle = async (eventId: string, emoji: string) => {
-        console.log(`Event reaction: eventId=${eventId}, emoji=${emoji}`);
-        // TODO: Implement Supabase call and state update for event-specific reactions
-        // This will likely require new or modified Supabase RPC functions.
-
-        // Placeholder for UI update - this is just a basic toggle for demonstration
-        setEventUserReactions(prev => {
-            const currentEventReactions = prev[eventId] || [];
-            if (currentEventReactions.includes(emoji)) {
-                return { ...prev, [eventId]: currentEventReactions.filter(r => r !== emoji) };
-            } else {
-                return { ...prev, [eventId]: [...currentEventReactions, emoji] };
-            }
-        });
-        setEventReactions(prev => {
-            const currentEmojiCount = prev[eventId]?.[emoji] || 0;
-            // Check if the emoji is *currently* in the user's reactions for this event *before* the update
-            const isReacted = (eventUserReactions[eventId] || []).includes(emoji);
-            const newEmojiCount = isReacted ? currentEmojiCount - 1 : currentEmojiCount + 1;
-
-            return {
-                ...prev,
-                [eventId]: {
-                    ...prev[eventId],
-                    [emoji]: Math.max(0, newEmojiCount)
-                }
-            };
-        });
-        // Note: eventReactionDetails would also need to be updated based on actual user data from Supabase.
-    };
 
     const handleTitleChange = useCallback((value: string) => {
         setNewTitle(value);
@@ -1001,6 +1007,10 @@ export function EventDialog({
         setEndTime(value);
     }, []);
 
+    const handleContentChange = useCallback((value: string) => {
+        setNewContent(value);
+    }, []);
+
     const handleEditClick = (eventId: string) => {
         const eventToEdit = events.find(e => e.id === eventId);
         if (!eventToEdit) return;
@@ -1009,6 +1019,7 @@ export function EventDialog({
         setShowAddForm(false);
 
         setNewTitle(eventToEdit.title ?? "");
+        setNewContent(eventToEdit.content ?? "");
         setStartDate(eventToEdit.start_time ? new Date(eventToEdit.start_time) : undefined);
         setStartTime(eventToEdit.start_time ? format(new Date(eventToEdit.start_time), "HH:mm") : "00:00");
         setEndDate(eventToEdit.end_time ? new Date(eventToEdit.end_time) : undefined);
@@ -1017,29 +1028,29 @@ export function EventDialog({
 
         setTimeout(() => {
             const eventElement = document.getElementById(`event-${eventId}`);
-             if (eventElement && scrollRef.current) {
-                 eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
-             }
+            if (eventElement && scrollRef.current) {
+                eventElement.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
         }, 100);
     };
 
     const handleCancelEdit = () => {
         setEditingEventId(null);
         if (selectedStartDate) {
-             const selectedDate = new Date(selectedStartDate);
-             setNewTitle("");
-             setStartDate(selectedDate);
-             setStartTime("00:00");
-             setEndDate(selectedDate);
-             setEndTime("00:00");
-             setIsAllDay(true);
+            const selectedDate = new Date(selectedStartDate);
+            setNewTitle("");
+            setStartDate(selectedDate);
+            setStartTime("00:00");
+            setEndDate(selectedDate);
+            setEndTime("00:00");
+            setIsAllDay(true);
         } else {
-             setNewTitle("");
-             setStartDate(undefined);
-             setStartTime("00:00");
-             setEndDate(undefined);
-             setEndTime("00:00");
-             setIsAllDay(true);
+            setNewTitle("");
+            setStartDate(undefined);
+            setStartTime("00:00");
+            setEndDate(undefined);
+            setEndTime("00:00");
+            setIsAllDay(true);
         }
     };
 
@@ -1077,7 +1088,7 @@ export function EventDialog({
                         </SheetTitle>
                     </SheetHeader>
                     <div className="px-4 flex-1 overflow-y-auto">
-                        <MemoizedEventContent 
+                        <MemoizedEventContent
                             isMobile={isMobile}
                             isOwner={isOwner}
                             entryId={entryId}
@@ -1088,7 +1099,9 @@ export function EventDialog({
                             showAddForm={showAddForm}
                             addFormDate={addFormDate}
                             newTitle={newTitle}
+                            newContent={newContent}
                             handleTitleChange={handleTitleChange}
+                            handleContentChange={handleContentChange}
                             startDate={startDate}
                             setStartDate={setStartDate}
                             startTime={startTime}
@@ -1114,7 +1127,7 @@ export function EventDialog({
                             editingEventId={editingEventId}
                             handleEditClick={handleEditClick}
                             handleCancelEdit={handleCancelEdit}
-                            handleEventReactionToggle={handleEventReactionToggle}
+                            handleEventReactionToggle={onEventReactionToggle}
                             eventUserReactions={eventUserReactions}
                             eventReactions={eventReactions}
                             eventReactionDetails={eventReactionDetails}
@@ -1130,7 +1143,7 @@ export function EventDialog({
             <DialogContent
                 className="w-[30%] h-[50vh] overflow-y-auto"
                 style={!isOwner ? {} : { top: modalPosition.top, left: modalPosition.left }}
-                onOpenAutoFocus={(e) => e.preventDefault()}> 
+                onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>
                     </DialogTitle>
@@ -1145,7 +1158,9 @@ export function EventDialog({
                         showAddForm={showAddForm}
                         addFormDate={addFormDate}
                         newTitle={newTitle}
+                        newContent={newContent}
                         handleTitleChange={handleTitleChange}
+                        handleContentChange={handleContentChange}
                         startDate={startDate}
                         setStartDate={setStartDate}
                         startTime={startTime}
@@ -1171,7 +1186,7 @@ export function EventDialog({
                         editingEventId={editingEventId}
                         handleEditClick={handleEditClick}
                         handleCancelEdit={handleCancelEdit}
-                        handleEventReactionToggle={handleEventReactionToggle}
+                        handleEventReactionToggle={onEventReactionToggle}
                         eventUserReactions={eventUserReactions}
                         eventReactions={eventReactions}
                         eventReactionDetails={eventReactionDetails}

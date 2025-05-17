@@ -1,0 +1,203 @@
+{
+  "main": {
+    "id": "2da5d0279663ba40",
+    "type": "split",
+    "children": [
+      {
+        "id": "0d53da82452fc9f3",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0202e6e86f169ea4",
+            "type": "leaf",
+            "state": {
+              "type": "canvas",
+              "state": {
+                "file": "DB設計.canvas",
+                "viewState": {
+                  "x": -1189.957955459892,
+                  "y": -219.35970458029377,
+                  "zoom": -0.46170590736545647
+                }
+              },
+              "icon": "lucide-layout-dashboard",
+              "title": "DB設計"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "22683ef7671d0a42",
+    "type": "split",
+    "children": [
+      {
+        "id": "7d6421c1bb3ac6c8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4cd21bdef8937f73",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "4194f2297d743b55",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "98383b3bf38a7154",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 298.5,
+    "collapsed": true
+  },
+  "right": {
+    "id": "ca949782beb08982",
+    "type": "split",
+    "children": [
+      {
+        "id": "4e1b6653cbecada5",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "cd61780f1abfc380",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "DB設計.canvas",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for DB設計"
+            }
+          },
+          {
+            "id": "956a055d6fb1dd07",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "DB設計.canvas",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from DB設計"
+            }
+          },
+          {
+            "id": "fb16b656fba8e883",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "cb02416d4e9c315d",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "DB設計.canvas",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of DB設計"
+            }
+          },
+          {
+            "id": "881af81a37c54ad7",
+            "type": "leaf",
+            "state": {
+              "type": "mermaid-toolbar-view",
+              "state": {},
+              "icon": "trident-custom",
+              "title": "Mermaid Toolbar"
+            }
+          }
+        ],
+        "currentTab": 4
+      }
+    ],
+    "direction": "horizontal",
+    "width": 368.5,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "audio-recorder:Start/stop recording": false,
+      "zk-prefixer:Create new unique note": false,
+      "mermaid-tools:Open Mermaid Toolbar": false
+    }
+  },
+  "active": "0202e6e86f169ea4",
+  "lastOpenFiles": [
+    "Untitled 1.canvas",
+    "202505171558.md",
+    "202505171609.md",
+    "Untitled.md",
+    "Untitled 1.md",
+    "DB設計.canvas",
+    "schema.mmd",
+    "schema.sql",
+    "2025-05-17.md",
+    "Welcome.md",
+    "Recording 20250517155834.m4a"
+  ]
+}

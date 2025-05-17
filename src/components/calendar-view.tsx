@@ -14,6 +14,16 @@ interface CalendarViewProps {
   currentUserId: string;
 }
 
+interface ReactionUser {
+  user_id: string;
+  username: string;
+  avatar_url?: string;
+}
+interface ReactionDetail {
+  count: number;
+  users: ReactionUser[];
+}
+
 export default function CalendarView({ userId, currentUserId }: CalendarViewProps) {
   const {
     setUserId,
@@ -28,6 +38,9 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     recentAvatars,
   } = useCalendar();
   const [events, setEvents] = useState<Event[]>([]);
+  const [eventReactions, setEventReactions] = useState<Record<string, Record<string, number>>>({});
+  const [eventReactionDetails, setEventReactionDetails] = useState<Record<string, Record<string, ReactionDetail>>>({});
+  const [eventUserReactions, setEventUserReactions] = useState<Record<string, string[]>>({});
   const isOwner = !userId || userId === currentUserId;
   const [userProfile, setUserProfile] = useState<UserProfile>({
     avatarUrl: null,
@@ -150,6 +163,144 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     console.log("events updated:", events);
   }, [events]);
 
+  // ──────────────────────────────────────────────
+  // Fetch reactions for *all* events whenever
+  //   - the calendar opens (initial mount) OR
+  //   - the `events` array changes
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (events.length === 0) return;
+
+    let isMounted = true;
+
+    (async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        const currentUserId = user?.id;
+
+        const newEventReactions: Record<string, Record<string, number>> = {};
+        const newEventReactionDetails: Record<string, Record<string, ReactionDetail>> = {};
+        const newEventUserReactions: Record<string, string[]> = {};
+
+        await Promise.all(
+          events.map(async (ev) => {
+            const [summaryRes, usersRes] = await Promise.all([
+              supabase.rpc("get_entry_reactions_summary", { p_entry_id: ev.id }),
+              supabase.rpc("get_entry_reaction_users", { p_entry_id: ev.id }),
+            ]);
+
+            // Summary
+            const summaryMap: Record<string, number> = {};
+            (summaryRes.data ?? []).forEach((r: any) => {
+              summaryMap[r.reaction_type] = r.count;
+            });
+            newEventReactions[ev.id] = summaryMap;
+
+            // Detail + current‑user
+            const detailMap: Record<string, ReactionDetail> = {};
+            const currentUserReactionsSet = new Set<string>();
+
+            (usersRes.data ?? []).forEach((r: any) => {
+              if (!detailMap[r.reaction_type]) {
+                detailMap[r.reaction_type] = { count: 0, users: [] };
+              }
+              detailMap[r.reaction_type].count++;
+              detailMap[r.reaction_type].users.push({
+                user_id: r.user_id,
+                username: r.username || r.user_id,
+                avatar_url: r.avatar_url,
+              });
+              if (r.user_id === currentUserId) {
+                currentUserReactionsSet.add(r.reaction_type);
+              }
+            });
+
+            newEventReactionDetails[ev.id] = detailMap;
+            newEventUserReactions[ev.id] = Array.from(currentUserReactionsSet);
+          })
+        );
+
+        if (!isMounted) return;
+        setEventReactions(newEventReactions);
+        setEventReactionDetails(newEventReactionDetails);
+        setEventUserReactions(newEventUserReactions);
+      } catch (err) {
+        console.error("[CalendarView] fetchAllEventReactions error:", err);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [events, supabase]);
+  // ──────────────────────────────────────────────
+
+  const handleEventReactionToggle = async (eventId: string, emoji: string) => {
+    try {
+      const { data: existingReaction } = await supabase.rpc("get_user_reaction", {
+        p_entry_id: eventId,
+        p_reaction_type: emoji,
+      });
+
+      if (existingReaction && existingReaction.length > 0) {
+        // remove
+        const { error } = await supabase.rpc("delete_entry_reaction", {
+          p_entry_id: eventId,
+          p_reaction_type: emoji,
+        });
+        if (error) throw error;
+      } else {
+        // add
+        const { error } = await supabase.rpc("add_entry_reaction", {
+          p_entry_id: eventId,
+          p_reaction_type: emoji,
+        });
+        if (error) throw error;
+      }
+
+      // refresh single event reaction info
+      const [{ data: summary }, { data: users }] = await Promise.all([
+        supabase.rpc("get_entry_reactions_summary", { p_entry_id: eventId }),
+        supabase.rpc("get_entry_reaction_users", { p_entry_id: eventId }),
+      ]);
+
+      const summaryMap: Record<string, number> = {};
+      (summary ?? []).forEach((r: any) => {
+        summaryMap[r.reaction_type] = r.count;
+      });
+
+      const detailMap: Record<string, ReactionDetail> = {};
+      const currentUserReactionsSet = new Set<string>();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      const currentUserId = user?.id;
+
+      (users ?? []).forEach((r: any) => {
+        if (!detailMap[r.reaction_type]) {
+          detailMap[r.reaction_type] = { count: 0, users: [] };
+        }
+        detailMap[r.reaction_type].count++;
+        detailMap[r.reaction_type].users.push({
+          user_id: r.user_id,
+          username: r.username || r.user_id,
+          avatar_url: r.avatar_url,
+        });
+        if (r.user_id === currentUserId) {
+          currentUserReactionsSet.add(r.reaction_type);
+        }
+      });
+
+      setEventReactions((prev) => ({ ...prev, [eventId]: summaryMap }));
+      setEventReactionDetails((prev) => ({ ...prev, [eventId]: detailMap }));
+      setEventUserReactions((prev) => ({ ...prev, [eventId]: Array.from(currentUserReactionsSet) }));
+    } catch (err) {
+      console.error("[CalendarView] handleEventReactionToggle error:", err);
+    }
+  };
+
   // EventFormModal の表示状態を管理（初期状態は非表示）
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -214,6 +365,10 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           selectedStartDate={selectedRange?.startDate || ""}
           selectedEndDate={selectedRange?.endDate || ""}
           modalPosition={modalPosition}
+          eventReactions={eventReactions}
+          eventReactionDetails={eventReactionDetails}
+          eventUserReactions={eventUserReactions}
+          onEventReactionToggle={handleEventReactionToggle}
         />
       )}
 
@@ -237,6 +392,10 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
               events={mappedEvents} // 変換後のイベント配列
               targetUserId={selectedUserIdForDialog}
               username={username} // 抽出したユーザー名を渡す
+              eventReactions={eventReactions}
+              eventReactionDetails={eventReactionDetails}
+              eventUserReactions={eventUserReactions}
+              onEventReactionToggle={handleEventReactionToggle}
             />
           );
         })()}

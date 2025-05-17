@@ -1,0 +1,17 @@
+{
+  "edges": [
+  ],
+  "nodes": [
+    {
+      "height": 960,
+      "id": "d2b85f22a185c8d3",
+      "styleAttributes": {
+      },
+      "text": "```mermaid\nerDiagram\n  USERS {\n    uuid   id PK\n    varchar email UK\n    varchar username\n    varchar full_name\n    varchar avatar_url\n    timestamptz created_at\n    timestamptz updated_at\n    text   bio\n  }\n\n  ENTRIES {\n    uuid   id PK\n    uuid   user_id FK\n    varchar entry_type\n    varchar title\n    text   content\n    timestamptz start_time\n    timestamptz end_time\n    boolean is_all_day\n    varchar location\n    timestamptz created_at\n    timestamptz updated_at\n    varchar visibility\n  }\n\n  ENTRYCOMMENTS {\n    uuid   id PK\n    uuid   entry_id FK\n    uuid   user_id FK\n    text   comment\n    timestamptz created_at\n  }\n\n  ENTRYREACTIONS {\n    uuid   id PK\n    uuid   entry_id FK\n    uuid   user_id FK\n    varchar reaction_type\n    timestamptz created_at\n  }\n\n  ENTRYVISIBILITYCUSTOMUSERS {\n    uuid   id PK\n    uuid   entry_id FK\n    uuid   visible_to_user_id FK\n    timestamptz created_at\n  }\n\n  FOLLOWS {\n    uuid   id PK\n    timestamptz created_at\n    uuid   follower_id FK\n    uuid   following_id FK\n  }\n\n  USERSTATUS {\n    uuid   user_id PK\n    boolean is_available\n    varchar message\n    timestamptz updated_at\n  }\n\n  MEMOS {\n    uuid   id PK\n    uuid   user_id FK\n    text   user_name\n    text   title\n    text   body\n    boolean pinned\n    timestamptz created_at\n    timestamptz updated_at\n  }\n\n  %% ──────────── Relationships ────────────\n  USERS ||--o{ ENTRIES : \"has\"\n  USERS ||--o{ ENTRYCOMMENTS : \"writes\"\n  USERS ||--o{ ENTRYREACTIONS : \"reacts\"\n  USERS ||--o{ ENTRYVISIBILITYCUSTOMUSERS : \"controls\"\n  USERS ||--o{ FOLLOWS : \"follower\"\n  USERS ||--o{ FOLLOWS : \"following\"\n  USERS ||--|| USERSTATUS : \"status\"\n  USERS ||--o{ MEMOS : \"owns\"\n\n  ENTRIES ||--o{ ENTRYCOMMENTS : \"receives\"\n  ENTRIES ||--o{ ENTRYREACTIONS : \"receives\"\n  ENTRIES ||--o{ ENTRYVISIBILITYCUSTOMUSERS : \"visibility\"\n```\n\n\n",
+      "type": "text",
+      "width": 1520,
+      "x": -1980,
+      "y": -680
+    }
+  ]
+}

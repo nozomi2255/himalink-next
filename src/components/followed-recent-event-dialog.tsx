@@ -45,6 +45,10 @@ interface EventDialogProps {
     selectedEndDate?: string;
     modalPosition?: { top: number; left: number };
     username: string;
+    eventReactions: Record<string, Record<string, number>>;
+    eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
+    eventUserReactions: Record<string, string[]>;
+    onEventReactionToggle: (eventId: string, emoji: string) => void;
 }
 
 function formatTime(datetime?: string, timeZone: string = 'Asia/Tokyo') {
@@ -513,6 +517,10 @@ export function EventDialog({
     selectedEndDate,
     modalPosition = { top: 100, left: 100 },
     username,
+    eventReactions,
+    eventReactionDetails,
+    eventUserReactions,
+    onEventReactionToggle,
 }: EventDialogProps) {
     const [entry, setEntry] = useState<Event | null>(null);
     const [comments, setComments] = useState<any[]>([]);
