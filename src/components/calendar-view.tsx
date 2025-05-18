@@ -120,7 +120,6 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
   };
 
   const handleAdd = async ({
-    userId,
     title,
     content,
     startDate,
@@ -129,7 +128,6 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     endTime,
     isAllDay,
   }: {
-    userId: string;
     title: string;
     content: string;
     startDate: Date | undefined;
@@ -139,7 +137,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     isAllDay: boolean;
   }) => {
     const { error } = await supabase.rpc('insert_entry', {
-      p_user_id: userId,
+      p_user_id: currentUserId, // Injected internally
       p_title: title,
       p_content: content,
       p_start_time: combineDateTime(startDate, startTime),
