@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/hooks/use-user";
 
 type ChatMessage = {
   id: string;
@@ -20,10 +21,13 @@ export default function ChatDetailPage() {
   const params = useParams();
   const userId = params.userId as string;
 
+  const { user, loading } = useUser();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
 
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
+
 
   const fetchMessages = async () => {
     const { data, error } = await supabase.rpc("get_chat_messages", {
@@ -47,16 +51,21 @@ export default function ChatDetailPage() {
   };
 
   useEffect(() => {
+    if (loading) return;         // avoid fetching until user info is ready
     if (userId) {
       fetchMessages();
     }
-  }, [userId]);
+  }, [userId, loading]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages]);
+
+  if (loading) {
+    return <div className="text-center mt-8">Loading...</div>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto mt-8 overflow-y-auto">
@@ -68,13 +77,13 @@ export default function ChatDetailPage() {
           <div
             key={msg.id}
             className={`mb-2 p-2 rounded max-w-[75%] ${
-              msg.sender_id === userId
+              msg.sender_id === user?.id
                 ? "bg-blue-100 text-right self-end ml-auto"
                 : "bg-gray-100 text-left"
             }`}
           >
             <div className="text-sm text-gray-600">
-              {msg.sender_id === userId ? "あなた" : "相手"}
+              {msg.sender_id === user?.id ? "あなた" : "相手"}
             </div>
             <div className="text-base whitespace-pre-wrap">{msg.message}</div>
             <div className="text-xs text-gray-400">
