@@ -108,6 +108,101 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     }
   };
 
+  const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
+    if (!date) return undefined;
+    const [hours, minutes] = time.split(':');
+    const newDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), parseInt(hours), parseInt(minutes));
+    if (isNaN(newDate.getTime())) {
+      console.error("Invalid date/time combination:", date, time);
+      return undefined;
+    }
+    return newDate.toISOString();
+  };
+
+  const handleAdd = async ({
+    userId,
+    title,
+    content,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    isAllDay,
+  }: {
+    userId: string;
+    title: string;
+    content: string;
+    startDate: Date | undefined;
+    startTime: string;
+    endDate: Date | undefined;
+    endTime: string;
+    isAllDay: boolean;
+  }) => {
+    const { error } = await supabase.rpc('insert_entry', {
+      p_user_id: userId,
+      p_title: title,
+      p_content: content,
+      p_start_time: combineDateTime(startDate, startTime),
+      p_end_time: combineDateTime(endDate, endTime),
+      p_is_all_day: isAllDay,
+      p_entry_type: "event",
+    });
+
+    if (error) {
+      console.error('RPC insert_entry error:', error);
+    } else {
+      setDialogOpen(false);
+      fetchEvents(); // 再取得
+    }
+  };
+
+  const handleUpdate = async (eventId: string, {
+    title,
+    content,
+    startDate,
+    startTime,
+    endDate,
+    endTime,
+    isAllDay,
+  }: {
+    title: string;
+    content: string;
+    startDate: Date | undefined;
+    startTime: string;
+    endDate: Date | undefined;
+    endTime: string;
+    isAllDay: boolean;
+  }) => {
+    const { error } = await supabase.rpc('update_entry', {
+      p_id: eventId,
+      p_title: title,
+      p_content: content,
+      p_start_time: combineDateTime(startDate, startTime),
+      p_end_time: combineDateTime(endDate, endTime),
+      p_is_all_day: isAllDay,
+    });
+
+    if (error) {
+      console.error('RPC update_entry error:', error);
+    } else {
+      setDialogOpen(false);
+      fetchEvents();
+    }
+  };
+
+  const handleDelete = async (eventId: string) => {
+    const { error } = await supabase.rpc('delete_entry', {
+      p_id: eventId,
+    });
+
+    if (error) {
+      console.error('RPC delete_entry error:', error);
+    } else {
+      setDialogOpen(false);
+      fetchEvents();
+    }
+  };
+
   // --- ここから RecentEvents 取得ロジック ---
   useEffect(() => {
     const fetchRecentEvents = async () => {
@@ -448,6 +543,9 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           selectedStartDate={selectedRange?.startDate || ""}
           selectedEndDate={selectedRange?.endDate || ""}
           modalPosition={modalPosition}
+          handleAdd={handleAdd}
+          handleUpdate={handleUpdate}
+          handleDelete={handleDelete}
           eventReactions={eventReactions}
           eventReactionDetails={eventReactionDetails}
           eventUserReactions={eventUserReactions}
@@ -465,32 +563,32 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
       )}
 
       {isFollowedEventDialogOpen && selectedUserIdForDialog && (() => {
-          // 選択されたユーザーのイベントをフィルタリング
-          const filteredEvents = recentAvatars.filter(event => event.user_id === selectedUserIdForDialog);
-          // ユーザー名を取得 (フィルタ結果があれば最初の要素から)
-          const username = filteredEvents.length > 0 ? filteredEvents[0].username : 'ユーザー';
-          // Event[] 型に変換
-          const mappedEvents = filteredEvents.map(re => ({
-            ...re,
-            id: re.event_id,
-            created_at: re.updated_at, 
-          }));
+        // 選択されたユーザーのイベントをフィルタリング
+        const filteredEvents = recentAvatars.filter(event => event.user_id === selectedUserIdForDialog);
+        // ユーザー名を取得 (フィルタ結果があれば最初の要素から)
+        const username = filteredEvents.length > 0 ? filteredEvents[0].username : 'ユーザー';
+        // Event[] 型に変換
+        const mappedEvents = filteredEvents.map(re => ({
+          ...re,
+          id: re.event_id,
+          created_at: re.updated_at,
+        }));
 
-          return (
-            <FollowedRecentEventDialog
-              open={isFollowedEventDialogOpen}
-              onOpenChange={setIsFollowedEventDialogOpen}
-              isOwner={false}
-              events={mappedEvents} // 変換後のイベント配列
-              targetUserId={selectedUserIdForDialog}
-              username={username} // 抽出したユーザー名を渡す
-              eventReactions={eventReactions}
-              eventReactionDetails={eventReactionDetails}
-              eventUserReactions={eventUserReactions}
-              onEventReactionToggle={handleEventReactionToggle}
-            />
-          );
-        })()}
+        return (
+          <FollowedRecentEventDialog
+            open={isFollowedEventDialogOpen}
+            onOpenChange={setIsFollowedEventDialogOpen}
+            isOwner={false}
+            events={mappedEvents} // 変換後のイベント配列
+            targetUserId={selectedUserIdForDialog}
+            username={username} // 抽出したユーザー名を渡す
+            eventReactions={eventReactions}
+            eventReactionDetails={eventReactionDetails}
+            eventUserReactions={eventUserReactions}
+            onEventReactionToggle={handleEventReactionToggle}
+          />
+        );
+      })()}
     </div>
   );
 }

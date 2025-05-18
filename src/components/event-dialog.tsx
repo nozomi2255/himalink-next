@@ -46,6 +46,9 @@ interface EventDialogProps {
     selectedStartDate?: string;
     selectedEndDate?: string;
     modalPosition?: { top: number; left: number };
+    handleAdd: (data: { title: string; content: string; startDate: Date | undefined; startTime: string; endDate: Date | undefined; endTime: string; isAllDay: boolean }) => void;
+    handleUpdate: (eventId: string, data: { title: string; content: string; startDate: Date | undefined; startTime: string; endDate: Date | undefined; endTime: string; isAllDay: boolean }) => void;
+    handleDelete: (eventId: string) => void;
     targetUserProfile?: UserProfile;
     eventReactions: Record<string, Record<string, number>>;
     eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
@@ -106,9 +109,9 @@ interface EventContentProps {
     handleEndTimeChange: (value: string) => void;
     isAllDay: boolean;
     setIsAllDay: (value: boolean) => void;
-    handleUpdate: () => void;
-    handleDelete: () => void;
-    handleAdd: () => void;
+    handleUpdate: (eventId: string, data: { title: string; content: string; startDate: Date | undefined; startTime: string; endDate: Date | undefined; endTime: string; isAllDay: boolean }) => void;
+    handleDelete: (eventId: string) => void;
+    handleAdd: (data: { title: string; content: string; startDate: Date | undefined; startTime: string; endDate: Date | undefined; endTime: string; isAllDay: boolean }) => void;
     handleReactionToggle: (emoji: string) => void;
     userReactions: string[];
     reactions: Record<string, number>;
@@ -223,15 +226,15 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                         {isOwner && (
                                                             entryId ? (
                                                                 <>
-                                                                    <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                                                    <Button onClick={() => handleUpdate(entryId, { title: newTitle, content: newContent, startDate, endDate, startTime, endTime, isAllDay })} variant="ghost" size="icon">
                                                                         <Save className="h-4 w-4" />
                                                                     </Button>
-                                                                    <Button onClick={handleDelete} variant="ghost" size="icon">
+                                                                    <Button onClick={() => handleDelete(entryId)} variant="ghost" size="icon">
                                                                         <Trash className="h-4 w-4" />
                                                                     </Button>
                                                                 </>
                                                             ) : (
-                                                                <Button onClick={handleAdd} variant="ghost" size="icon">
+                                                                <Button onClick={() => handleAdd({ title: newTitle, content: newContent, startDate, endDate, startTime, endTime, isAllDay })} variant="ghost" size="icon">
                                                                     <Check className="h-4 w-4" />
                                                                 </Button>
                                                             )
@@ -337,10 +340,10 @@ const MemoizedEventContent = memo<EventContentProps>(({
                                                             <div className={cn("flex justify-end", isMobile && "mb-4")}>
                                                                 {isOwner && (
                                                                     <>
-                                                                        <Button onClick={handleUpdate} variant="ghost" size="icon">
+                                                                        <Button onClick={() => handleUpdate(event.id, { title: newTitle, content: newContent, startDate, endDate, startTime, endTime, isAllDay })} variant="ghost" size="icon">
                                                                             <Save className="h-4 w-4" />
                                                                         </Button>
-                                                                        <Button onClick={handleDelete} variant="ghost" size="icon">
+                                                                        <Button onClick={() => handleDelete(event.id)} variant="ghost" size="icon">
                                                                             <Trash className="h-4 w-4" />
                                                                         </Button>
                                                                         <Button onClick={handleCancelEdit} variant="ghost" size="icon">
@@ -624,6 +627,9 @@ export function EventDialog({
     onCommentTextChange,
     commentText,
     onCommentSubmit,
+    handleAdd,
+    handleUpdate,
+    handleDelete,
 }: EventDialogProps) {
     const [newTitle, setNewTitle] = useState("");
     const [newContent, setNewContent] = useState("");
@@ -649,6 +655,37 @@ export function EventDialog({
     const [addFormDate, setAddFormDate] = useState<Date | null>(null)
     const scrollRef = useRef<HTMLDivElement | null>(null)
     const [editingEventId, setEditingEventId] = useState<string | null>(null);
+    // Wrapper functions for MemoizedEventContent handlers
+    const handleAddWrapper = (data: {
+      title: string;
+      content: string;
+      startDate: Date | undefined;
+      startTime: string;
+      endDate: Date | undefined;
+      endTime: string;
+      isAllDay: boolean;
+    }) => {
+      handleAdd(data);
+    };
+
+    const handleUpdateWrapper = (
+      eventId: string,
+      data: {
+        title: string;
+        content: string;
+        startDate: Date | undefined;
+        startTime: string;
+        endDate: Date | undefined;
+        endTime: string;
+        isAllDay: boolean;
+      }
+    ) => {
+      handleUpdate(eventId, data);
+    };
+
+    const handleDeleteWrapper = (eventId: string) => {
+      handleDelete(eventId);
+    };
 
 
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -811,75 +848,6 @@ export function EventDialog({
         }
     }, [entryId, addFormDate, showAddForm, datesWithEvents, scrollRef]);
 
-
-
-    const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
-        if (!date) return undefined;
-        const [hours, minutes] = time.split(':');
-        const newDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), parseInt(hours), parseInt(minutes));
-        if (isNaN(newDate.getTime())) {
-            console.error("Invalid date/time combination:", date, time);
-            return undefined;
-        }
-        return newDate.toISOString();
-    };
-
-    const handleAdd = async () => {
-        const { error } = await supabase.rpc('insert_entry', {
-            p_user_id: targetUserId,
-            p_title: newTitle,
-            p_content: newContent,
-            p_start_time: combineDateTime(startDate, startTime),
-            p_end_time: combineDateTime(endDate, endTime),
-            p_is_all_day: isAllDay,
-            p_entry_type: "event",
-        });
-
-        if (error) {
-            console.error('RPC insert_entry error:', error);
-        } else {
-            onOpenChange(false);
-        }
-    };
-
-    const handleUpdate = async () => {
-        if (!editingEventId) return;
-        const { error } = await supabase.rpc('update_entry', {
-            p_id: editingEventId,
-            p_title: newTitle,
-            p_content: newContent,
-            p_start_time: combineDateTime(startDate, startTime),
-            p_end_time: combineDateTime(endDate, endTime),
-            p_is_all_day: isAllDay,
-        });
-
-        if (error) {
-            console.error('RPC update_entry error:', error);
-        } else {
-            setEditingEventId(null);
-            onOpenChange(false);
-        }
-    };
-
-    const handleDelete = async () => {
-        const eventIdToDelete = editingEventId || entryId;
-        if (!eventIdToDelete) return;
-
-        const { error } = await supabase.rpc('delete_entry', {
-            p_id: eventIdToDelete,
-        });
-
-        if (error) {
-            console.error('RPC delete_entry error:', error);
-        } else {
-            setEditingEventId(null);
-            onOpenChange(false);
-        }
-    };
-
-    // Remove handleReactionToggle, now expect as prop
-
-
     const handleTitleChange = useCallback((value: string) => {
         setNewTitle(value);
     }, []);
@@ -987,6 +955,9 @@ export function EventDialog({
                             newContent={newContent}
                             handleTitleChange={handleTitleChange}
                             handleContentChange={handleContentChange}
+                            handleUpdate={handleUpdateWrapper}
+                            handleDelete={handleDeleteWrapper}
+                            handleAdd={handleAddWrapper}
                             startDate={startDate}
                             setStartDate={setStartDate}
                             startTime={startTime}
@@ -997,10 +968,7 @@ export function EventDialog({
                             handleEndTimeChange={handleEndTimeChange}
                             isAllDay={isAllDay}
                             setIsAllDay={setIsAllDay}
-                            handleUpdate={handleUpdate}
-                            handleDelete={handleDelete}
-                            handleAdd={handleAdd}
-                            handleReactionToggle={() => {}} // No-op or lift up as needed
+                            handleReactionToggle={() => { }} // No-op or lift up as needed
                             userReactions={userReactions}
                             reactions={reactions}
                             reactionDetails={reactionDetails}
@@ -1056,6 +1024,9 @@ export function EventDialog({
                         newContent={newContent}
                         handleTitleChange={handleTitleChange}
                         handleContentChange={handleContentChange}
+                        handleUpdate={handleUpdateWrapper}
+                        handleDelete={handleDeleteWrapper}
+                        handleAdd={handleAddWrapper}
                         startDate={startDate}
                         setStartDate={setStartDate}
                         startTime={startTime}
@@ -1066,10 +1037,7 @@ export function EventDialog({
                         handleEndTimeChange={handleEndTimeChange}
                         isAllDay={isAllDay}
                         setIsAllDay={setIsAllDay}
-                        handleUpdate={handleUpdate}
-                        handleDelete={handleDelete}
-                        handleAdd={handleAdd}
-                        handleReactionToggle={() => {}} // No-op or lift up as needed
+                        handleReactionToggle={() => { }} // No-op or lift up as needed
                         userReactions={userReactions}
                         reactions={reactions}
                         reactionDetails={reactionDetails}
