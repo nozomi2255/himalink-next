@@ -9,7 +9,6 @@ import { Loader2 } from "lucide-react";
 export const navItems = [
   { label: "ホーム", icon: CalendarDays, href: "/my-calendar" },
   { label: "タイムライン", icon: GalleryVerticalEnd, href: "/timeline" },
-  { label: "検索", icon: Search, href: "/search" },
   { label: "プロフィール", icon: User, href: "/profile" },
   { label: "メモ", icon: NotebookTabs, href: "/memo" },
 ] as const;

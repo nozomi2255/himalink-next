@@ -569,8 +569,18 @@ const MemoizedEventContent = memo<EventContentProps>(({
                         <h4 className="text-sm font-medium">コメント</h4>
                         <div className="space-y-2 max-h-48 overflow-y-auto">
                             {comments.map((c) => (
-                                <div key={c.id} className="border rounded p-2 text-sm">
-                                    <span className="font-semibold">{c.user_id}</span>: {c.comment}
+                                <div key={c.id} className="border rounded p-2 text-sm flex items-center gap-2">
+                                    {/* Avatar + username */}
+                                    <span className="flex items-center gap-1">
+                                        {c.avatar_url && (
+                                            <Avatar className="h-5 w-5">
+                                                <AvatarImage src={c.avatar_url} alt={c.username || c.user_id} />
+                                                <AvatarFallback>{(c.username || c.user_id || "U")[0]?.toUpperCase()}</AvatarFallback>
+                                            </Avatar>
+                                        )}
+                                        <span className="font-semibold">{c.username || c.user_id}</span>
+                                    </span>
+                                    <span>: {c.comment}</span>
                                 </div>
                             ))}
                         </div>

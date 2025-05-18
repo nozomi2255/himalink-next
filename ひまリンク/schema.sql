@@ -506,21 +506,21 @@ $$;
 ALTER FUNCTION "public"."get_user_reaction"("p_entry_id" "uuid", "p_reaction_type" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."insert_entry"("p_user_id" "uuid", "p_title" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_is_all_day" boolean, "p_entry_type" "text") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."insert_entry"("p_user_id" "uuid", "p_title" "text", "p_content" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_is_all_day" boolean, "p_entry_type" "text") RETURNS "void"
     LANGUAGE "plpgsql"
     AS $$
 begin
   insert into "Entries" (
-    user_id, title, start_time, end_time, is_all_day, entry_type, created_at, updated_at
+    user_id, title, content, start_time, end_time, is_all_day, entry_type, created_at, updated_at
   )
   values (
-    p_user_id, p_title, p_start_time, p_end_time, p_is_all_day, p_entry_type, now(), now()
+    p_user_id, p_title, p_content, p_start_time, p_end_time, p_is_all_day, p_entry_type, now(), now()
   );
 end;
 $$;
 
 
-ALTER FUNCTION "public"."insert_entry"("p_user_id" "uuid", "p_title" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_is_all_day" boolean, "p_entry_type" "text") OWNER TO "postgres";
+ALTER FUNCTION "public"."insert_entry"("p_user_id" "uuid", "p_title" "text", "p_content" "text", "p_start_time" timestamp with time zone, "p_end_time" timestamp with time zone, "p_is_all_day" boolean, "p_entry_type" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."search_users"("search_query" "text") RETURNS TABLE("id" "uuid", "name" "text", "email" "text")
