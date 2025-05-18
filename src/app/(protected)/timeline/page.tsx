@@ -131,6 +131,33 @@ export default function TimelinePage() {
     fetchEntryImages(eventId);
   };
 
+  // 画像削除
+  const handleImageDelete = async (eventId: string, imageId: string, imageUrl: string) => {
+    const path = imageUrl.split("/public-files/")[1];
+    if (!path) return;
+
+    const { error: storageError } = await supabase.storage
+      .from("public-files")
+      .remove([path]);
+
+    if (storageError) {
+      console.error("ストレージ削除エラー:", storageError);
+      return;
+    }
+
+    const { error: dbError } = await supabase
+      .from("EntryImages")
+      .delete()
+      .eq("id", imageId);
+
+    if (dbError) {
+      console.error("DB削除エラー:", dbError);
+      return;
+    }
+
+    fetchEntryImages(eventId);
+  };
+
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
 
@@ -458,6 +485,30 @@ export default function TimelinePage() {
                       </div>
                     </CardHeader>
                     <CardContent>
+                      {/* 画像一覧表示 */}
+                      {eventImages[event.event_id]?.map((img, index) => (
+                        <div key={index} className="mt-4 relative inline-block">
+                          <img
+                            src={img.image_url}
+                            alt={img.caption || "event image"}
+                            className="rounded w-full max-w-md"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute top-2 right-2 hover:bg-white"
+                            onClick={() => handleImageDelete(event.event_id, img.id, img.image_url)}
+                          >
+                            ✕
+                          </Button>
+                          {img.caption && <p className="text-sm text-gray-500 mt-1">{img.caption}</p>}
+                        </div>
+                      ))}
+
+                      {/* アップロードフォーム */}
+                      <div className="mt-4 space-y-2">
+                        <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(event.event_id, e.target.files?.[0])} />
+                      </div>
                       <div className="mt-2 flex gap-2">
                         {["👍", "❤️", "🎉", "🤔"].map((emoji) => (
                           <Button
@@ -502,18 +553,6 @@ export default function TimelinePage() {
                             </div>
                           ))}
                         </div>
-                      </div>
-                      {/* 画像一覧表示 */}
-                      {eventImages[event.event_id]?.map((img, index) => (
-                        <div key={index} className="mt-4">
-                          <img src={img.image_url} alt={img.caption || "event image"} className="rounded w-full max-w-md" />
-                          {img.caption && <p className="text-sm text-gray-500 mt-1">{img.caption}</p>}
-                        </div>
-                      ))}
-
-                      {/* アップロードフォーム */}
-                      <div className="mt-4 space-y-2">
-                        <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(event.event_id, e.target.files?.[0])} />
                       </div>
                     </CardContent>
                   </Card>
