@@ -1,3 +1,4 @@
+// src/hooks/use-user.ts
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { User } from '@supabase/supabase-js';

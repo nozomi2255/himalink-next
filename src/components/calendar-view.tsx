@@ -339,6 +339,89 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     setDialogOpen(true);
   };
 
+  // ---------------------- 追加 state (entry/comments/reactions) ----------------------
+  const [entry, setEntry] = useState<Event | null>(null);
+  const [comments, setComments] = useState<any[]>([]);
+  const [reactions, setReactions] = useState<Record<string, number>>({});
+  const [reactionDetails, setReactionDetails] = useState<Record<string, ReactionDetail>>({});
+  const [userReactions, setUserReactions] = useState<string[]>([]);
+  const [commentText, setCommentText] = useState("");
+
+  // entryId 選択時の取得処理
+  useEffect(() => {
+    const fetchEntryData = async () => {
+      if (!selectedEventId) return;
+      const [entryRes, commentsRes, summaryRes, usersRes] = await Promise.all([
+        supabase.rpc("get_entry_with_details", { p_entry_id: selectedEventId }),
+        supabase.rpc("get_entry_comments", { p_entry_id: selectedEventId }),
+        supabase.rpc("get_entry_reactions_summary", { p_entry_id: selectedEventId }),
+        supabase.rpc("get_entry_reaction_users", { p_entry_id: selectedEventId }),
+      ]);
+
+      const currentUser = (await supabase.auth.getUser()).data.user;
+      const currentUserId = currentUser?.id;
+
+      setEntry(entryRes.data?.[0] || null);
+      setComments(commentsRes.data ?? []);
+      setReactions(Object.fromEntries((summaryRes.data ?? []).map((r: any) => [r.reaction_type, r.count])));
+
+      const detailsMap: Record<string, ReactionDetail> = {};
+      const currentUserReactionsSet = new Set<string>();
+      (usersRes.data ?? []).forEach((r: any) => {
+        if (!detailsMap[r.reaction_type]) {
+          detailsMap[r.reaction_type] = { count: 0, users: [] };
+        }
+        detailsMap[r.reaction_type].count++;
+        detailsMap[r.reaction_type].users.push({
+          user_id: r.user_id,
+          username: r.username || r.user_id,
+          avatar_url: r.avatar_url,
+        });
+        if (r.user_id === currentUserId) {
+          currentUserReactionsSet.add(r.reaction_type);
+        }
+      });
+      setReactionDetails(detailsMap);
+      setUserReactions(Array.from(currentUserReactionsSet));
+    };
+
+    if (dialogOpen && selectedEventId) {
+      fetchEntryData();
+    } else {
+      setEntry(null);
+      setComments([]);
+      setReactions({});
+      setReactionDetails({});
+      setUserReactions([]);
+    }
+  }, [dialogOpen, selectedEventId, supabase]);
+
+  // コメント送信処理
+  const handleCommentTextChange = (text: string) => {
+    setCommentText(text);
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!selectedEventId || !commentText.trim()) return;
+
+    const { error } = await supabase.rpc("add_entry_comment", {
+      p_entry_id: selectedEventId,
+      p_comment: commentText,
+    });
+
+    if (error) {
+      console.error("コメント投稿エラー:", error.message);
+      return;
+    }
+
+    const { data } = await supabase.rpc("get_entry_comments", {
+      p_entry_id: selectedEventId,
+    });
+
+    setComments(data ?? []);
+    setCommentText("");
+  };
+
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <MainCalendar
@@ -369,6 +452,15 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           eventReactionDetails={eventReactionDetails}
           eventUserReactions={eventUserReactions}
           onEventReactionToggle={handleEventReactionToggle}
+          // --- entry/comments/reactions props 追加 ---
+          entry={entry}
+          comments={comments}
+          reactions={reactions}
+          reactionDetails={reactionDetails}
+          userReactions={userReactions}
+          commentText={commentText}
+          onCommentTextChange={handleCommentTextChange}
+          onCommentSubmit={handleCommentSubmit}
         />
       )}
 

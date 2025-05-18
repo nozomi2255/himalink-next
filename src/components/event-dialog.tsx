@@ -51,6 +51,15 @@ interface EventDialogProps {
     eventReactionDetails: Record<string, Record<string, ReactionDetail>>;
     eventUserReactions: Record<string, string[]>;
     onEventReactionToggle: (eventId: string, emoji: string) => void;
+    // --- Added props for entry/comments/reactions ---
+    entry: Event | null;
+    comments: any[];
+    reactions: Record<string, number>;
+    reactionDetails: Record<string, ReactionDetail>;
+    userReactions: string[];
+    onCommentTextChange: (text: string) => void;
+    commentText: string;
+    onCommentSubmit: () => void;
 }
 
 function formatTime(datetime?: string, timeZone: string = 'Asia/Tokyo') {
@@ -606,13 +615,16 @@ export function EventDialog({
     eventReactionDetails,
     eventUserReactions,
     onEventReactionToggle,
+    // new props for entry/comments/reactions
+    entry,
+    comments,
+    reactions,
+    reactionDetails,
+    userReactions,
+    onCommentTextChange,
+    commentText,
+    onCommentSubmit,
 }: EventDialogProps) {
-    const [entry, setEntry] = useState<Event | null>(null);
-    const [comments, setComments] = useState<any[]>([]);
-    const [reactions, setReactions] = useState<Record<string, number>>({});
-    const [reactionDetails, setReactionDetails] = useState<Record<string, ReactionDetail>>({});
-    const [userReactions, setUserReactions] = useState<string[]>([]);
-    const [commentText, setCommentText] = useState("");
     const [newTitle, setNewTitle] = useState("");
     const [newContent, setNewContent] = useState("");
     const [isAllDay, setIsAllDay] = useState(true);
@@ -799,79 +811,6 @@ export function EventDialog({
         }
     }, [entryId, addFormDate, showAddForm, datesWithEvents, scrollRef]);
 
-    useEffect(() => {
-        if (!open) {
-            if (entry) setEntry(null);
-            return;
-        }
-
-        if (!entryId) {
-            if (entry) {
-                setEntry(null);
-            }
-            return;
-        }
-
-        let isMounted = true;
-        const fetchData = async () => {
-            try {
-                const [entryResult, commentResult, reactionResult, reactionUsersResult] = await Promise.all([
-                    supabase.rpc("get_entry_with_details", { p_entry_id: entryId }),
-                    supabase.rpc("get_entry_comments", { p_entry_id: entryId }),
-                    supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId }),
-                    supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId })
-                ]);
-
-                if (!isMounted) return;
-
-                const fetchedEntry = entryResult.data?.[0] ?? null;
-                setEntry(fetchedEntry);
-
-                setComments(commentResult.data ?? []);
-
-                setReactions(Object.fromEntries((reactionResult.data ?? []).map((r: any) => [r.reaction_type, r.count])));
-
-                const detailsMap: Record<string, ReactionDetail> = {};
-                const currentUserReactionsSet = new Set<string>();
-                const { data: { user } } = await supabase.auth.getUser();
-                const currentUserId = user?.id;
-
-                if (reactionUsersResult.data) {
-                    reactionUsersResult.data.forEach((reaction: any) => {
-                        if (!detailsMap[reaction.reaction_type]) {
-                            detailsMap[reaction.reaction_type] = { count: 0, users: [] };
-                        }
-                        detailsMap[reaction.reaction_type].count++;
-                        detailsMap[reaction.reaction_type].users.push({
-                            user_id: reaction.user_id,
-                            username: reaction.username || reaction.user_id,
-                            avatar_url: reaction.avatar_url
-                        });
-                        if (reaction.user_id === currentUserId) {
-                            currentUserReactionsSet.add(reaction.reaction_type);
-                        }
-                    });
-                }
-                setReactionDetails(detailsMap);
-                setUserReactions(Array.from(currentUserReactionsSet));
-
-            } catch (error) {
-                console.error("[Fetch Data Effect] Error fetching data:", error);
-                if (!isMounted) return;
-                setEntry(null);
-                setComments([]);
-                setReactions({});
-                setReactionDetails({});
-                setUserReactions([]);
-            }
-        };
-
-        fetchData();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [entryId, open, supabase]);
 
 
     const combineDateTime = (date: Date | undefined, time: string): string | undefined => {
@@ -938,71 +877,7 @@ export function EventDialog({
         }
     };
 
-    const handleReactionToggle = async (emoji: string) => {
-        if (!entryId) return;
-
-        try {
-            const { data: existingReaction } = await supabase.rpc('get_user_reaction', {
-                p_entry_id: entryId,
-                p_reaction_type: emoji
-            });
-            console.log("get_user_reaction実行結果:", { existingReaction });
-
-            if (existingReaction && existingReaction.length > 0) {
-                const { error, data } = await supabase.rpc('delete_entry_reaction', {
-                    p_entry_id: entryId,
-                    p_reaction_type: emoji
-                });
-
-                console.log("削除実行結果:", { error, data });
-                if (error) {
-                    console.error("削除エラー詳細:", error);
-                    throw error;
-                }
-
-                console.log("削除されたリアクション数:", data?.[0]?.deleted_count || 0);
-
-                const { data: newReactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
-
-                setUserReactions(prev => prev.filter(r => r !== emoji));
-            } else {
-                const { error } = await supabase.rpc('add_entry_reaction', {
-                    p_entry_id: entryId,
-                    p_reaction_type: emoji
-                });
-
-                if (error) throw error;
-
-                setUserReactions(prev => [...prev, emoji]);
-            }
-
-            const { data: reactionData } = await supabase.rpc("get_entry_reactions_summary", { p_entry_id: entryId });
-            const { data: reactionUsersData } = await supabase.rpc("get_entry_reaction_users", { p_entry_id: entryId });
-
-            setReactions(Object.fromEntries((reactionData ?? []).map((r: any) => [r.reaction_type, r.count])));
-
-            const detailsMap: Record<string, ReactionDetail> = {};
-            if (reactionUsersData) {
-                reactionUsersData.forEach((reaction: any) => {
-                    if (!detailsMap[reaction.reaction_type]) {
-                        detailsMap[reaction.reaction_type] = {
-                            count: 0,
-                            users: []
-                        };
-                    }
-                    detailsMap[reaction.reaction_type].count++;
-                    detailsMap[reaction.reaction_type].users.push({
-                        user_id: reaction.user_id,
-                        username: reaction.username || reaction.user_id,
-                        avatar_url: reaction.avatar_url
-                    });
-                });
-            }
-            setReactionDetails(detailsMap);
-        } catch (error) {
-            console.error('リアクション処理エラー:', error);
-        }
-    };
+    // Remove handleReactionToggle, now expect as prop
 
 
     const handleTitleChange = useCallback((value: string) => {
@@ -1125,7 +1000,7 @@ export function EventDialog({
                             handleUpdate={handleUpdate}
                             handleDelete={handleDelete}
                             handleAdd={handleAdd}
-                            handleReactionToggle={handleReactionToggle}
+                            handleReactionToggle={() => {}} // No-op or lift up as needed
                             userReactions={userReactions}
                             reactions={reactions}
                             reactionDetails={reactionDetails}
@@ -1142,6 +1017,16 @@ export function EventDialog({
                             eventReactions={eventReactions}
                             eventReactionDetails={eventReactionDetails}
                         />
+                        {/* コメント入力欄 */}
+                        <div className="mt-4">
+                            <Textarea
+                                value={commentText}
+                                onChange={(e) => onCommentTextChange(e.target.value)}
+                                placeholder="コメントを入力"
+                                className="w-full"
+                            />
+                            <Button className="mt-2" onClick={onCommentSubmit}>投稿</Button>
+                        </div>
                     </div>
                 </SheetContent>
             </Sheet>
@@ -1184,7 +1069,7 @@ export function EventDialog({
                         handleUpdate={handleUpdate}
                         handleDelete={handleDelete}
                         handleAdd={handleAdd}
-                        handleReactionToggle={handleReactionToggle}
+                        handleReactionToggle={() => {}} // No-op or lift up as needed
                         userReactions={userReactions}
                         reactions={reactions}
                         reactionDetails={reactionDetails}
@@ -1201,6 +1086,16 @@ export function EventDialog({
                         eventReactions={eventReactions}
                         eventReactionDetails={eventReactionDetails}
                     />
+                    {/* コメント入力欄 */}
+                    <div className="mt-4">
+                        <Textarea
+                            value={commentText}
+                            onChange={(e) => onCommentTextChange(e.target.value)}
+                            placeholder="コメントを入力"
+                            className="w-full"
+                        />
+                        <Button className="mt-2" onClick={onCommentSubmit}>投稿</Button>
+                    </div>
                 </DialogHeader>
             </DialogContent>
         </Dialog>
