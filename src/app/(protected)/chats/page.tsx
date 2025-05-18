@@ -1,3 +1,4 @@
+// src/app/(protected)/chats/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -10,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { useUser } from "@/hooks/use-user";
 
 type User = {
   id: string;
@@ -28,6 +30,7 @@ type ChatMessage = {
 
 export default function ChatPage() {
   const supabase = createClient();
+  const { user } = useUser();   // 現在ログインしているユーザー
   const [followingUsers, setFollowingUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [openSheet, setOpenSheet] = useState<boolean>(false);
@@ -67,9 +70,7 @@ export default function ChatPage() {
       p_message: text,
       p_recipient_id: selectedUserId,
     });
-    if (!error) {
-      await fetchMessages(selectedUserId);
-    }
+    // Realtime サブスクで自動反映されるので即時リロード不要
   };
 
   const fetchFollowingUsers = async () => {
@@ -83,6 +84,49 @@ export default function ChatPage() {
   useEffect(() => {
     fetchFollowingUsers();
   }, []);
+
+  // Realtime で ChatMessages の INSERT を購読
+  useEffect(() => {
+    if (!user) return; // 認証前は購読しない
+
+    const channel = supabase
+      .channel("chat_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "ChatMessages",
+        },
+        (payload: any) => {
+          const msg = payload.new as ChatMessage;
+
+          // 自分が sender か recipient でなければ無視
+          if (msg.sender_id !== user.id && msg.recipient_id !== user.id) return;
+
+          // 相手IDを判定
+          const otherId =
+            msg.sender_id === user.id ? msg.recipient_id : msg.sender_id;
+
+          // 最新メッセージをカードへ
+          setLatestMessages((prev) => ({
+            ...prev,
+            [otherId]: msg.message,
+          }));
+
+          // 現在開いているチャットならメッセージリストにも追加
+          if (selectedUserId === otherId) {
+            setMessages((prev) => [...prev, msg]);
+          }
+        }
+      )
+      .subscribe();
+
+    // クリーンアップ
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, selectedUserId]);
 
   return (
     <>
