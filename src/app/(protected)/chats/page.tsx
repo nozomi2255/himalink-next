@@ -1,4 +1,3 @@
-// src/app/(protected)/chats/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -128,6 +127,8 @@ export default function ChatPage() {
     };
   }, [user, selectedUserId]);
 
+  const selectedUser = followingUsers.find((u) => u.id === selectedUserId);
+
   return (
     <>
       <div className="max-w-4xl mx-auto mt-8 flex flex-col sm:flex-row gap-6">
@@ -167,7 +168,7 @@ export default function ChatPage() {
         </div>
       </div>
       <Sheet open={openSheet} onOpenChange={setOpenSheet}>
-        <SheetContent side="right" className="w-full sm:max-w-md">
+        <SheetContent side="right" className="w-full sm:max-w-md px-0">
           <SheetHeader>
             <SheetTitle>チャット</SheetTitle>
           </SheetHeader>
@@ -175,6 +176,7 @@ export default function ChatPage() {
             <ChatWindow
               messages={messages}
               onSend={handleSendMessage}
+              avatarUrl={selectedUser?.avatar_url || ""}
             />
           ) : (
             <div className="text-center text-gray-500 mt-4">
