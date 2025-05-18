@@ -1,11 +1,9 @@
-// src/app/(protected)/chats/[userId]/page.tsx
+// src/app/(protected)/chats/components/chat-message.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/use-user";
 
 type ChatMessage = {
@@ -16,46 +14,22 @@ type ChatMessage = {
   created_at: string;
 };
 
-export default function ChatDetailPage() {
-  const supabase = createClient();
-  const params = useParams();
-  const userId = params.userId as string;
+interface ChatWindowProps {
+  messages: ChatMessage[];
+  onSend: (text: string) => void;
+}
 
+export default function ChatWindow({ messages, onSend }: ChatWindowProps) {
   const { user, loading } = useUser();
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
-
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
-
-  const fetchMessages = async () => {
-    const { data, error } = await supabase.rpc("get_chat_messages", {
-      p_user_id: userId,
-    });
-    if (!error && data) {
-      setMessages(data);
-    }
-  };
-
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!newMessage.trim()) return;
-    const { error } = await supabase.rpc("add_chat_message", {
-      p_message: newMessage,
-      p_recipient_id: userId,
-    });
-    if (!error) {
-      setNewMessage("");
-      fetchMessages();
-    }
+    onSend(newMessage);
+    setNewMessage("");
   };
-
-  useEffect(() => {
-    if (loading) return;         // avoid fetching until user info is ready
-    if (userId) {
-      fetchMessages();
-    }
-  }, [userId, loading]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -68,7 +42,7 @@ export default function ChatDetailPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto mt-8 overflow-y-auto">
+    <div className="flex flex-col w-full">
       <div
         ref={chatContainerRef}
         className="border p-4 h-[400px] overflow-y-auto mb-4 bg-white rounded flex flex-col"
