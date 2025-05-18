@@ -11,17 +11,14 @@
             "id": "0202e6e86f169ea4",
             "type": "leaf",
             "state": {
-              "type": "canvas",
+              "type": "markdown",
               "state": {
-                "file": "DB設計.canvas",
-                "viewState": {
-                  "x": -1159.2195370739444,
-                  "y": -137.3905888844304,
-                  "zoom": -0.46170590736545647
-                }
+                "file": "テーブル設計.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "lucide-layout-dashboard",
-              "title": "DB設計"
+              "icon": "lucide-file",
+              "title": "テーブル設計"
             }
           }
         ]
@@ -81,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 298.5,
-    "collapsed": true
+    "width": 298.5
   },
   "right": {
     "id": "ca949782beb08982",
@@ -189,11 +185,11 @@
   "active": "0202e6e86f169ea4",
   "lastOpenFiles": [
     "Untitled 1.canvas",
+    "テーブル設計.md",
+    "DB設計.canvas",
     "202505171558.md",
     "202505171609.md",
     "Untitled.md",
-    "Untitled 1.md",
-    "DB設計.canvas",
     "schema.mmd",
     "schema.sql",
     "2025-05-17.md",

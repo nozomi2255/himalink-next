@@ -6,6 +6,9 @@ import { createClient } from "@/utils/supabase/client";
 import { useUser } from "@/hooks/use-user";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { Search } from "lucide-react";
 
 // 型定義
@@ -80,6 +83,53 @@ export default function TimelinePage() {
   const [eventUserReactions, setEventUserReactions] = useState<Record<string, string[]>>({});
   const [eventComments, setEventComments] = useState<Record<string, any[]>>({});
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  // 画像一覧用state
+  const [eventImages, setEventImages] = useState<Record<string, any[]>>({});
+  // イベント画像取得
+  const fetchEntryImages = async (eventId: string) => {
+    const { data, error } = await supabase.rpc("get_entry_images", {
+      p_entry_id: eventId,
+    });
+    if (!error) {
+      setEventImages((prev) => ({ ...prev, [eventId]: data || [] }));
+    } else {
+      console.error("画像取得エラー:", error);
+    }
+  };
+
+  // 画像アップロード
+  const handleImageUpload = async (eventId: string, file: File | undefined) => {
+    if (!file) return;
+    const fileExt = file.name.split(".").pop();
+    const filePath = `entry-images/${eventId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("public-files")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("アップロードエラー:", uploadError);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("public-files").getPublicUrl(filePath);
+
+    const { error: rpcError } = await supabase.rpc("add_entry_image", {
+      p_entry_id: eventId,
+      p_image_url: urlData?.publicUrl,
+      p_caption: "", // キャプションがあれば後で追加可
+    });
+
+    if (rpcError) {
+      console.error("DB登録エラー:", rpcError);
+      return;
+    }
+
+    fetchEntryImages(eventId);
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -174,7 +224,7 @@ export default function TimelinePage() {
     fetchTimelineEvents();
   }, [user?.id]);
 
-  // ──────────────── 追加: イベントごとのリアクション・コメント初期取得 ────────────────
+  // ──────────────── 追加: イベントごとのリアクション・コメント・画像初期取得 ────────────────
   useEffect(() => {
     // 全イベントを1配列に
     const allEvents = groupedEvents.flatMap(g => g.events);
@@ -225,6 +275,8 @@ export default function TimelinePage() {
             newEventUserReactions[ev.event_id] = Array.from(currentUserReactionsSet);
             // comments
             newEventComments[ev.event_id] = commentsRes.data ?? [];
+            // 画像
+            fetchEntryImages(ev.event_id);
           })
         );
         if (!isMounted) return;
@@ -380,21 +432,15 @@ export default function TimelinePage() {
               </h2>
               <div className="space-y-6">
                 {group.events.map((event) => (
-                  <div
-                    key={event.event_id}
-                    className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow duration-200"
-                  >
-                    <div className="flex items-start space-x-4">
-                      <img
-                        src={event.avatar_url || "/default-avatar.png"}
-                        alt={`${event.username}のアバター`}
-                        className="w-12 h-12 rounded-full object-cover flex-shrink-0"
-                      />
+                  <Card key={event.event_id}>
+                    <CardHeader className="flex flex-row items-start gap-4">
+                      <Avatar>
+                        <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt={`${event.username}のアバター`} />
+                        <AvatarFallback>{event.username.charAt(0)}</AvatarFallback>
+                      </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between flex-wrap gap-x-2">
-                          <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 truncate">
-                            {event.username}
-                          </h3>
+                          <CardTitle className="text-lg truncate">{event.username}</CardTitle>
                           <span className="text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
                             {event.is_all_day
                               ? "終日"
@@ -409,58 +455,68 @@ export default function TimelinePage() {
                         {event.location && (
                           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">場所: {event.location}</p>
                         )}
-                        {/* --- RPCベースのリアクションボタン & コメント欄 --- */}
-                        <div className="mt-4 flex gap-2">
-                          {["👍", "❤️", "🎉", "🤔"].map((emoji) => (
-                            <Button
-                              key={emoji}
-                              variant={(eventUserReactions[event.event_id] || []).includes(emoji) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => handleEventReactionToggle(event.event_id, emoji)}
-                            >
-                              {emoji} {(eventReactions[event.event_id]?.[emoji] || 0)}
-                            </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="mt-2 flex gap-2">
+                        {["👍", "❤️", "🎉", "🤔"].map((emoji) => (
+                          <Button
+                            key={emoji}
+                            variant={(eventUserReactions[event.event_id] || []).includes(emoji) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleEventReactionToggle(event.event_id, emoji)}
+                          >
+                            {emoji} {(eventReactions[event.event_id]?.[emoji] || 0)}
+                          </Button>
+                        ))}
+                      </div>
+                      <div className="mt-4">
+                        <textarea
+                          placeholder="コメントを入力..."
+                          className="w-full border rounded p-2 text-sm"
+                          rows={2}
+                          value={commentInputs[event.event_id] || ""}
+                          onChange={(e) => handleCommentChange(event.event_id, e.target.value)}
+                        />
+                        <Button
+                          size="sm"
+                          className="mt-2"
+                          onClick={() => handleCommentSubmit(event.event_id)}
+                        >
+                          コメントを投稿
+                        </Button>
+                        <div className="mt-2 space-y-1 text-sm text-gray-700">
+                          {(eventComments[event.event_id] || []).map((c: any, index: number) => (
+                            <div key={index} className="border rounded px-2 py-1 bg-gray-50 flex items-center gap-2">
+                              <span className="flex items-center gap-1">
+                                {c.avatar_url && (
+                                  <img
+                                    src={c.avatar_url}
+                                    alt={c.username || c.user_id}
+                                    className="w-5 h-5 rounded-full object-cover"
+                                  />
+                                )}
+                                <strong>{c.username || c.user_id}</strong>
+                              </span>
+                              <span>: {c.comment}</span>
+                            </div>
                           ))}
                         </div>
-                        {/* コメント欄 */}
-                        <div className="mt-4">
-                          <textarea
-                            placeholder="コメントを入力..."
-                            className="w-full border rounded p-2 text-sm"
-                            rows={2}
-                            value={commentInputs[event.event_id] || ""}
-                            onChange={(e) => handleCommentChange(event.event_id, e.target.value)}
-                          />
-                          <Button
-                            size="sm"
-                            className="mt-2"
-                            onClick={() => handleCommentSubmit(event.event_id)}
-                          >
-                            コメントを投稿
-                          </Button>
-                          <div className="mt-2 space-y-1 text-sm text-gray-700">
-                            {(eventComments[event.event_id] || []).map((c: any, index: number) => (
-                              <div key={index} className="border rounded px-2 py-1 bg-gray-50 flex items-center gap-2">
-                                {/* Avatar + username */}
-                                <span className="flex items-center gap-1">
-                                  {c.avatar_url && (
-                                    <img
-                                      src={c.avatar_url}
-                                      alt={c.username || c.user_id}
-                                      className="w-5 h-5 rounded-full object-cover"
-                                    />
-                                  )}
-                                  <strong>{c.username || c.user_id}</strong>
-                                </span>
-                                <span>: {c.comment}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        {/* --- ここまで --- */}
                       </div>
-                    </div>
-                  </div>
+                      {/* 画像一覧表示 */}
+                      {eventImages[event.event_id]?.map((img, index) => (
+                        <div key={index} className="mt-4">
+                          <img src={img.image_url} alt={img.caption || "event image"} className="rounded w-full max-w-md" />
+                          {img.caption && <p className="text-sm text-gray-500 mt-1">{img.caption}</p>}
+                        </div>
+                      ))}
+
+                      {/* アップロードフォーム */}
+                      <div className="mt-4 space-y-2">
+                        <Input type="file" accept="image/*" onChange={(e) => handleImageUpload(event.event_id, e.target.files?.[0])} />
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             </div>
