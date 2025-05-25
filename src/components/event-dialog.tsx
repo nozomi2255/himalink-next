@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import {
   addDays,
   compareAsc,
@@ -125,6 +126,7 @@ interface EventDialogProps {
   onCommentTextChange: (text: string) => void;
   commentText: string;
   onCommentSubmit: () => void;
+  onUserAvatarClick?: (userId: string) => void;
 }
 
 function formatTime(datetime?: string, timeZone: string = "Asia/Tokyo") {
@@ -220,6 +222,7 @@ interface EventContentProps {
     imageId: string,
     imageUrl: string,
   ) => void;
+  onUserAvatarClick: (userId: string) => void;
 }
 
 const MemoizedEventContent = memo<EventContentProps>(
@@ -272,6 +275,7 @@ const MemoizedEventContent = memo<EventContentProps>(
     eventImages,
     handleImageUpload,
     handleImageDelete,
+    onUserAvatarClick,
   }) => {
     return (
       <>
@@ -280,7 +284,12 @@ const MemoizedEventContent = memo<EventContentProps>(
             <Card className="mt-4">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Avatar>
+                  <Avatar
+                    className="cursor-pointer"
+                    onClick={() =>
+                      targetUserId && onUserAvatarClick(targetUserId)
+                    }
+                  >
                     <AvatarImage
                       src={targetUserProfile.avatarUrl || undefined}
                       alt={targetUserProfile.username || "User Avatar"}
@@ -1047,6 +1056,10 @@ export function EventDialog({
   handleUpdate,
   handleDelete,
 }: EventDialogProps) {
+  const router = useRouter();
+  const handleUserAvatarClick = (uid: string) => {
+    router.push(`/other-calendar/${uid}`);
+  };
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [isAllDay, setIsAllDay] = useState(true);
@@ -1075,7 +1088,54 @@ export function EventDialog({
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>(
     {},
   );
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
   const [eventImages, setEventImages] = useState<Record<string, any[]>>({});
+
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      if (!entryId) return;
+      const { data } = await supabase.rpc("get_entry_participants", {
+        p_entry_id: entryId,
+      });
+      setParticipants(data || []);
+    };
+    fetchParticipants();
+  }, [entryId]);
+
+  const handleInviteUser = async () => {
+    if (!entryId || !inviteEmail.trim()) return;
+    const { error } = await supabase.rpc("invite_user_to_event", {
+      p_entry_id: entryId,
+      p_email: inviteEmail,
+    });
+    if (!error) {
+      const { data } = await supabase.rpc("get_entry_participants", {
+        p_entry_id: entryId,
+      });
+      setParticipants(data || []);
+      setInviteEmail("");
+    }
+  };
+
+  const handleJoinEvent = async () => {
+    if (!entryId) return;
+    await supabase.rpc("request_join_event", { p_entry_id: entryId });
+  };
+
+  const handleApproveJoin = async (uid: string) => {
+    if (!entryId) return;
+    const { error } = await supabase.rpc("approve_join_request", {
+      p_entry_id: entryId,
+      p_user_id: uid,
+    });
+    if (!error) {
+      const { data } = await supabase.rpc("get_entry_participants", {
+        p_entry_id: entryId,
+      });
+      setParticipants(data || []);
+    }
+  };
   // Wrapper functions for MemoizedEventContent handlers
   const handleAddWrapper = (data: {
     title: string;
@@ -1557,6 +1617,7 @@ export function EventDialog({
               eventImages={eventImages}
               handleImageUpload={handleImageUpload}
               handleImageDelete={handleImageDelete}
+              onUserAvatarClick={handleUserAvatarClick}
             />
             {/* コメント入力欄 */}
             <div className="mt-4">
@@ -1569,6 +1630,39 @@ export function EventDialog({
               <Button className="mt-2" onClick={onCommentSubmit}>
                 投稿
               </Button>
+              {isOwner && (
+                <div className="mt-4 flex gap-2">
+                  <Input
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="招待メール"
+                  />
+                  <Button size="sm" onClick={handleInviteUser}>
+                    招待
+                  </Button>
+                </div>
+              )}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium">参加者</h4>
+                <ul className="space-y-1">
+                  {participants.map((p) => (
+                    <li key={p.user_id} className="flex items-center gap-2">
+                      <span>{p.username}</span>
+                      <span className="text-xs text-gray-500">({p.status})</span>
+                      {isOwner && p.status === "requested" && (
+                        <Button size="sm" onClick={() => handleApproveJoin(p.user_id)}>
+                          承認
+                        </Button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {!isOwner && (
+                  <Button size="sm" onClick={handleJoinEvent} className="mt-2">
+                    参加する
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </SheetContent>
@@ -1637,6 +1731,7 @@ export function EventDialog({
             eventImages={eventImages}
             handleImageUpload={handleImageUpload}
             handleImageDelete={handleImageDelete}
+            onUserAvatarClick={handleUserAvatarClick}
           />
           {/* コメント入力欄 */}
           <div className="mt-4">
@@ -1649,6 +1744,39 @@ export function EventDialog({
             <Button className="mt-2" onClick={onCommentSubmit}>
               投稿
             </Button>
+            {isOwner && (
+              <div className="mt-4 flex gap-2">
+                <Input
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="招待メール"
+                />
+                <Button size="sm" onClick={handleInviteUser}>
+                  招待
+                </Button>
+              </div>
+            )}
+            <div className="mt-4">
+              <h4 className="text-sm font-medium">参加者</h4>
+              <ul className="space-y-1">
+                {participants.map((p) => (
+                  <li key={p.user_id} className="flex items-center gap-2">
+                    <span>{p.username}</span>
+                    <span className="text-xs text-gray-500">({p.status})</span>
+                    {isOwner && p.status === "requested" && (
+                      <Button size="sm" onClick={() => handleApproveJoin(p.user_id)}>
+                        承認
+                      </Button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {!isOwner && (
+                <Button size="sm" onClick={handleJoinEvent} className="mt-2">
+                  参加する
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
       </DialogContent>

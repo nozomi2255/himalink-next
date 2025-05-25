@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import MainCalendar from "./main-calendar";
 import { Event } from '../app/types';
 import { createClient } from "@/utils/supabase/client";
-import { EventDialog } from "@/components/event-dialog"
+import { EventDialog } from "@/components/event-dialog";
 import { EventDialog as FollowedRecentEventDialog } from "@/components/followed-recent-event-dialog";
+import { useRouter } from "next/navigation";
 import { useCalendar } from "@/contexts/calendar-context";
 import type { UserProfile, RecentEvent } from "@/app/types"
 
@@ -48,6 +49,11 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
     bio: "",
   });
   const supabase = createClient();
+  const router = useRouter();
+
+  const handleUserAvatarClick = (uid: string) => {
+    router.push(`/other-calendar/${uid}`);
+  };
 
   // ContextにユーザーIDを設定
   useEffect(() => {
@@ -557,6 +563,7 @@ export default function CalendarView({ userId, currentUserId }: CalendarViewProp
           commentText={commentText}
           onCommentTextChange={handleCommentTextChange}
           onCommentSubmit={handleCommentSubmit}
+          onUserAvatarClick={handleUserAvatarClick}
         />
       )}
 
