@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
 
 import { Search } from "lucide-react";
 
@@ -76,6 +77,7 @@ export default function TimelinePage() {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useUser();
   const supabase = createClient();
+  const router = useRouter();
 
   // --- 追加: イベントごとのリアクション・コメント用state ---
   const [eventReactions, setEventReactions] = useState<Record<string, Record<string, number>>>({});
@@ -398,6 +400,10 @@ export default function TimelinePage() {
     setCommentInputs((prev) => ({ ...prev, [eventId]: "" }));
   };
 
+  const handleJoin = async (eventId: string) => {
+    await supabase.rpc("request_join_event", { p_entry_id: eventId });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -428,9 +434,18 @@ export default function TimelinePage() {
           <div className="mt-4 space-y-4 bg-white p-4 rounded-lg shadow-md border border-gray-200">
             {searchResults.map((user: any) => (
               <div key={user.id} className="flex items-center justify-between border-b pb-3 last:border-none">
-                <div>
-                  <p className="font-semibold">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                <div className="flex items-center gap-2">
+                  <Avatar
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/other-calendar/${user.id}`)}
+                  >
+                    <AvatarImage src={user.avatar_url || "/default-avatar.png"} alt={`${user.name}のアバター`} />
+                    <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold">{user.name}</p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                  </div>
                 </div>
                 <Button
                   variant={user.is_following ? "default" : "outline"}
@@ -461,7 +476,10 @@ export default function TimelinePage() {
                 {group.events.map((event) => (
                   <Card key={event.event_id}>
                     <CardHeader className="flex flex-row items-start gap-4">
-                      <Avatar>
+                      <Avatar
+                        className="cursor-pointer"
+                        onClick={() => router.push(`/other-calendar/${event.user_id}`)}
+                      >
                         <AvatarImage src={event.avatar_url || "/default-avatar.png"} alt={`${event.username}のアバター`} />
                         <AvatarFallback>{event.username.charAt(0)}</AvatarFallback>
                       </Avatar>
@@ -553,6 +571,9 @@ export default function TimelinePage() {
                             </div>
                           ))}
                         </div>
+                        <Button size="sm" onClick={() => handleJoin(event.event_id)} className="mt-2">
+                          参加する
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
